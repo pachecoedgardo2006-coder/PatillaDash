@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Backend/">
+    <Project Path="src/Backend/PatillaDash.Api/PatillaDash.Api.csproj" />
+    <Project Path="src/Backend/PatillaDash.Application/PatillaDash.Application.csproj" />
+    <Project Path="src/Backend/PatillaDash.Domain/PatillaDash.Domain.csproj" />
+    <Project Path="src/Backend/PatillaDash.Infrastructure/PatillaDash.Infrastructure.csproj" />
+  </Folder>
+</Solution>

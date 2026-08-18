@@ -1,0 +1,6 @@
+@PatillaDash.Api_HostAddress = http://localhost:5136
+
+GET {{PatillaDash.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
