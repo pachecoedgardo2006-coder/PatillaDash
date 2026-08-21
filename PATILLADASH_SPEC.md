@@ -126,7 +126,7 @@ PatillaDash/
 │   │   │   │   ├── IInventarioService.cs
 │   │   │   │   ├── ICompraService.cs
 │   │   │   │   ├── IPagoEmpleadoService.cs
-│   │   │   │   ├── IEstadisticasService.cs
+│   │   │   │   └── IEstadisticasService.cs
 │   │   │   │   ├── IJwtTokenGenerator.cs
 │   │   │   │   └── IPasswordHasher.cs
 │   │   │   ├── Services/
@@ -150,14 +150,14 @@ PatillaDash/
 │   │   │       └── PasswordHasher.cs             # Hasher de contraseñas con BCrypt
 │   │   │
 │   │   └── PatillaDash.Api/                      # Capa 4: Endpoints HTTP y Configuración
-│   │       ├── Program.cs                        # DI, Middlewares, CORS, DbContext, Auth
+│   │       ├── Program.cs                        # DI, Middlewares, CORS, DbContext, Auth, ProblemDetails, Scalar
 │   │       ├── appsettings.json                  # Cadena de conexión SQLite ("Data Source=patilladash.db")
 │   │       ├── Controllers/
-│   │       │   ├── AuthController.cs             # POST /api/auth/login
-│   │       │   ├── VentasController.cs           # POST /api/ventas/diaria
-│   │       │   ├── InventarioController.cs       # GET /api/inventario/local/{localId}
-│   │       │   ├── ComprasController.cs          # POST /api/compras
-│   │       │   ├── PagosController.cs            # POST /api/pagos, GET /api/pagos
+│   │       │   ├── AuthController.cs             # POST /api/auth/login, POST /api/auth/register
+│   │       │   ├── VentasController.cs           # POST /api/ventas/diaria, GET /api/ventas/local/{localId}
+│   │       │   ├── InventarioController.cs       # GET /api/inventario/local/{localId}, PUT /api/inventario/stock
+│   │       │   ├── ComprasController.cs          # POST /api/compras, GET /api/compras
+│   │       │   ├── PagosController.cs            # POST /api/pagos, GET /api/pagos/vendedor/{id}, GET /api/pagos/local/{id}
 │   │       │   └── EstadisticasController.cs     # GET /api/estadisticas/dashboard
 │   │       ├── Filters/
 │   │       │   └── ValidationFilter.cs           # Filtro global FluentValidation
@@ -246,25 +246,20 @@ PatillaDash/
 - [x] Implementar repositorios concretos con Entity Framework Core.
 - [x] Implementar `JwtTokenGenerator` y hasher de contraseñas.
 
-> **Detalles técnicos completados en 2.3 a considerar:**
-> - `patilladash.db` inicializada con las 10 tablas, claves foráneas, índices únicos (`(LocalId, SuministroId)` y `Email`) y tipos de datos configurados.
-> - Extensiones de Inyección de Dependencias preparadas: `services.AddInfrastructure(Configuration)` y `services.AddApplication()`.
-> - Interfaces `IJwtTokenGenerator` y `IPasswordHasher` abstraídas e inyectadas limpiamente.
-
 #### 2.4 API, Middlewares y Seguridad
-- [ ] Configurar `Program.cs` (Inyección de Dependencias, Connection String, Autenticación JWT).
-- [ ] Implementar Controladores: `AuthController`, `VentasController`, `InventarioController`, `ComprasController`, `PagosController`, `EstadisticasController`.
-- [ ] Configurar `GlobalExceptionHandler` con formato RFC 7807 (`ProblemDetails`).
-- [ ] Configurar `ValidationFilter` global para DTOs.
-- [ ] Configurar políticas CORS para peticiones desde el Frontend Vite SPA.
-- [ ] Habilitar documentación OpenAPI / Scalar / Swagger.
+- [x] Configurar `Program.cs` (Inyección de Dependencias, Connection String, Autenticación JWT, CORS, ProblemDetails).
+- [x] Implementar Controladores: `AuthController`, `VentasController`, `InventarioController`, `ComprasController`, `PagosController`, `EstadisticasController`.
+- [x] Configurar `GlobalExceptionHandler` con formato RFC 7807 (`ProblemDetails`).
+- [x] Configurar `ValidationFilter` global para DTOs con FluentValidation.
+- [x] Configurar políticas CORS para peticiones desde el Frontend Vite SPA.
+- [x] Habilitar documentación OpenAPI y Scalar API Reference.
 
-> **Puntos clave a tener en cuenta para la Fase 2.4:**
-> 1. **Autenticación JWT:** Configurar `AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(...)` validando `Issuer`, `Audience` y `SecretKey` provistos en `appsettings.json`.
-> 2. **Seguridad de Controladores:** Decorar endpoints con `[Authorize(Roles = "Administrador")]` y `[Authorize(Roles = "Vendedor")]`, asegurando que el vendedor opere únicamente sobre su `LocalId` extraído del claim JWT.
-> 3. **Gestión Unificada de Respuestas de Error:** Implementar `GlobalExceptionHandler` traduciendo excepciones de dominio (`InvalidOperationException`, `ArgumentException`) a `ProblemDetails` (RFC 7807) con códigos HTTP adecuados (400, 404, 500).
-> 4. **Filtro de Validación Automática:** `ValidationFilter` interceptará las peticiones para ejecutar los validadores de FluentValidation registrados en `Application` antes de entrar a la acción del controlador.
-> 5. **CORS:** Habilitar origen `http://localhost:5173` (Vite) con soporte para métodos HTTP (`GET`, `POST`, `PUT`, `DELETE`) y headers (`Authorization`, `Content-Type`).
+> **Detalles técnicos completados en 2.4 a considerar:**
+> - Todos los 6 controladores creados y securizados con `[Authorize(Roles = "...")]`.
+> - Enrutamiento RESTful completado con control de acceso por `LocalId` en el rol `Vendedor`.
+> - `ValidationFilter` intercepta y valida automáticamente cualquier DTO contra los validadores de `Application` respondiendo con `400 Bad Request` y formato `ValidationProblemDetails`.
+> - `GlobalExceptionHandler` unifica respuestas de error ante excepciones no controladas en formato RFC 7807.
+> - `Scalar.AspNetCore` integrado para explorar y probar la API en desarrollo `/scalar/v1`.
 
 ### 📌 FASE 3: Desarrollo del Frontend SPA (Vanilla JS + Tailwind CSS)
 #### 3.1 Infraestructura Frontend & Router
@@ -282,6 +277,11 @@ PatillaDash/
 - [ ] **Vista Admin - Pagos (`pagosEmpleadosView.js`):** Registro de anticipos/sueldos e historial de nómina por local.
 - [ ] **Vista Admin - Compras (`comprasView.js`):** Formulario de compras con actualización en tiempo real de inventario.
 - [ ] **Vista Admin - Estadísticas (`estadisticasView.js`):** KPIs financieros, desglose de métodos de pago y ranking de locales.
+
+> **Puntos clave a tener en cuenta para la Fase 3:**
+> 1. **Manejo del Token JWT:** Guardar el token en `localStorage` o `sessionStorage`, decodificar el payload en el cliente para obtener `rol`, `localId`, `nombre`, y expirar la sesión automáticamente ante respuestas `401 Unauthorized`.
+> 2. **Enrutamiento SPA:** Usar History API o Hash routing (`#/...`) en `router.js` con Guards que redirijan a `/login` si no hay sesión o a su panel correspondiente (`/vendedor/registro` o `/admin/dashboard`) según rol.
+> 3. **Consumo de Endpoints:** Consumir los endpoints expuestos en `http://localhost:5136/api/...` respetando la estructura de DTOs definida en el Backend.
 
 ### 📌 FASE 4: Integración, Pruebas y Despliegue
 - [ ] Pruebas end-to-end del flujo del vendedor (reporte diario -> actualización de stock e ingresos).

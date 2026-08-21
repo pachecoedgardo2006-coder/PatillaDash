@@ -1,6 +1,101 @@
 @PatillaDash.Api_HostAddress = http://localhost:5136
 
-GET {{PatillaDash.Api_HostAddress}}/weatherforecast/
+### 1. Registrar Administrador
+POST {{PatillaDash.Api_HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "nombre": "Administrador Principal",
+  "email": "admin@patilladash.com",
+  "password": "AdminPassword123!",
+  "rol": 1,
+  "localId": null
+}
+
+### 2. Login Administrador
+# @name loginAdmin
+POST {{PatillaDash.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@patilladash.com",
+  "password": "AdminPassword123!"
+}
+
+### 3. Registrar Vendedor
+POST {{PatillaDash.Api_HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "nombre": "Carlos Vendedor",
+  "email": "carlos@patilladash.com",
+  "password": "VendedorPassword123!",
+  "rol": 2,
+  "localId": 1
+}
+
+### 4. Consultar Dashboard Estadísticas
+GET {{PatillaDash.Api_HostAddress}}/api/estadisticas/dashboard
+Authorization: Bearer {{loginAdmin.response.body.token}}
 Accept: application/json
 
-###
+### 5. Consultar Inventario Local
+GET {{PatillaDash.Api_HostAddress}}/api/inventario/local/1
+Authorization: Bearer {{loginAdmin.response.body.token}}
+Accept: application/json
+
+### 6. Registrar Compra de Insumos
+POST {{PatillaDash.Api_HostAddress}}/api/compras
+Authorization: Bearer {{loginAdmin.response.body.token}}
+Content-Type: application/json
+
+{
+  "localId": 1,
+  "suministroId": 1,
+  "cantidad": 20,
+  "costoTotal": 50000,
+  "proveedor": "Distribuidora Frutas del Valle"
+}
+
+### 7. Registrar Venta Diaria
+POST {{PatillaDash.Api_HostAddress}}/api/ventas/diaria
+Authorization: Bearer {{loginAdmin.response.body.token}}
+Content-Type: application/json
+
+{
+  "localId": 1,
+  "vendedorId": 2,
+  "totalEfectivo": 120000,
+  "totalTransferencia": 80000,
+  "notas": "Cierre de turno sin novedades",
+  "detalles": [
+    {
+      "productoId": 1,
+      "cantidadVendida": 20,
+      "subtotal": 100000
+    },
+    {
+      "productoId": 2,
+      "cantidadVendida": 10,
+      "subtotal": 100000
+    }
+  ],
+  "consumos": [
+    {
+      "suministroId": 1,
+      "cantidadGastada": 5
+    }
+  ]
+}
+
+### 8. Registrar Pago a Empleado
+POST {{PatillaDash.Api_HostAddress}}/api/pagos
+Authorization: Bearer {{loginAdmin.response.body.token}}
+Content-Type: application/json
+
+{
+  "localId": 1,
+  "vendedorId": 2,
+  "monto": 60000,
+  "observacion": "Pago de turno diario"
+}
