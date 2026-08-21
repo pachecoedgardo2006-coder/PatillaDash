@@ -35,6 +35,13 @@ public class EstadisticasService : IEstadisticasService
 
         decimal totalGastosCompras = compras.Sum(c => c.CostoTotal);
         decimal totalGastosNomina = pagos.Sum(p => p.Monto);
+        decimal balanceNeto = totalIngresos - (totalGastosCompras + totalGastosNomina);
+
+        string metodoPredominante = totalEfectivo > totalTransferencia 
+            ? "Efectivo" 
+            : totalTransferencia > totalEfectivo 
+                ? "Transferencia" 
+                : "Igualdad";
 
         var rankingLocales = ventas
             .GroupBy(v => new { v.LocalId, Nombre = v.Local?.Nombre ?? "Sin Local" })
@@ -52,6 +59,8 @@ public class EstadisticasService : IEstadisticasService
             TotalIngresos = totalIngresos,
             TotalGastosCompras = totalGastosCompras,
             TotalGastosNomina = totalGastosNomina,
+            BalanceNeto = balanceNeto,
+            MetodoPagoPredominante = metodoPredominante,
             VentasMetodoPago = new VentasPorMetodoPagoDto
             {
                 TotalEfectivo = totalEfectivo,

@@ -6,4 +6,8 @@
     <Project Path="src/Backend/PatillaDash.Domain/PatillaDash.Domain.csproj" />
     <Project Path="src/Backend/PatillaDash.Infrastructure/PatillaDash.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/Backend/">
+    <Project Path="tests/Backend/PatillaDash.Tests/PatillaDash.Tests.csproj" />
+  </Folder>
 </Solution>
