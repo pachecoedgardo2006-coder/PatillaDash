@@ -32,7 +32,6 @@ public class InventarioService : IInventarioService
         var item = await _inventarioRepository.GetByLocalAndSuministroAsync(dto.LocalId, dto.SuministroId);
         if (item != null)
         {
-            // Ajustamos calculando la diferencia con IncrementarStock o DescontarStock según la lógica de tu entidad
             var diferencia = dto.NuevaCantidad - item.CantidadDisponible;
             if (diferencia > 0)
             {

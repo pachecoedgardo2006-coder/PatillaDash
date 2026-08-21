@@ -7,5 +7,9 @@ public class InventarioLocalDto
     public string UnidadMedida { get; set; } = string.Empty;
     public decimal CantidadDisponible { get; set; }
     public decimal StockMinimoAlerta { get; set; }
-    public bool RequiereReabastecimiento => CantidadDisponible <= StockMinimoAlerta;
+    
+    /// <summary>
+    /// Indica si el stock actual está por debajo o igual al stock mínimo de alerta.
+    /// </summary>
+    public bool EnAlerta => CantidadDisponible <= StockMinimoAlerta;
 }
