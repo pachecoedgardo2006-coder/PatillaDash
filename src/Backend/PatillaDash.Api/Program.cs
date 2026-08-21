@@ -65,7 +65,7 @@ builder.Services.AddControllers(options =>
     options.Filters.Add<ValidationFilter>();
 });
 
-// OpenAPI & Scalar
+// OpenAPI & Documentación
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
@@ -73,11 +73,16 @@ var app = builder.Build();
 // Pipeline de manejo de errores
 app.UseExceptionHandler();
 
-// Documentación de API interactiva en desarrollo
+// Documentación de API interactiva en desarrollo con Scalar
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    app.MapScalarApiReference();
+    app.MapScalarApiReference(options =>
+    {
+        options.WithTitle("PatillaDash API Docs")
+               .WithTheme(ScalarTheme.Purple)
+               .WithDefaultHttpClient(ScalarTarget.JavaScript, ScalarClient.Axios);
+    });
 }
 
 app.UseHttpsRedirection();
