@@ -30,6 +30,14 @@ public class InventarioRepository : IInventarioRepository
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<InventarioLocal>> GetAllAsync()
+    {
+        return await _context.Inventarios
+            .Include(i => i.Suministro)
+            .Include(i => i.Local)
+            .ToListAsync();
+    }
+
     public async Task AddAsync(InventarioLocal inventario)
     {
         await _context.Inventarios.AddAsync(inventario);

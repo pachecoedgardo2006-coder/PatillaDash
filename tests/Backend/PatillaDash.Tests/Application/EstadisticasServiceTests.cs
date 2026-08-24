@@ -12,14 +12,19 @@ public class EstadisticasServiceTests
     private readonly Mock<IVentaRepository> _ventaRepoMock = new();
     private readonly Mock<ICompraRepository> _compraRepoMock = new();
     private readonly Mock<IPagoEmpleadoRepository> _pagoRepoMock = new();
+    private readonly Mock<IInventarioRepository> _inventarioRepoMock = new();
     private readonly EstadisticasService _estadisticasService;
 
     public EstadisticasServiceTests()
     {
+        _inventarioRepoMock.Setup(r => r.GetAllAsync())
+            .ReturnsAsync(new List<InventarioLocal>());
+
         _estadisticasService = new EstadisticasService(
             _ventaRepoMock.Object,
             _compraRepoMock.Object,
-            _pagoRepoMock.Object
+            _pagoRepoMock.Object,
+            _inventarioRepoMock.Object
         );
     }
 

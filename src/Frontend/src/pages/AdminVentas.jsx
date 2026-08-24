@@ -13,7 +13,10 @@ import {
   ShoppingBag,
   MessageSquare,
   CreditCard,
-  Banknote
+  Banknote,
+  CheckCircle2,
+  AlertTriangle,
+  Scale
 } from 'lucide-react';
 
 export default function AdminVentas() {
@@ -60,6 +63,11 @@ export default function AdminVentas() {
   const totalVentas = ventas.reduce((acc, curr) => acc + (curr.totalGeneral || 0), 0);
   const totalEfectivo = ventas.reduce((acc, curr) => acc + (curr.totalEfectivo || 0), 0);
   const totalTransferencia = ventas.reduce((acc, curr) => acc + (curr.totalTransferencia || 0), 0);
+
+  // Cálculos para el modal seleccionado
+  const totalProductosVendidos = ventaSeleccionada?.detalles?.reduce((acc, curr) => acc + (curr.subtotal || 0), 0) || 0;
+  const totalCajaReportado = ventaSeleccionada ? (ventaSeleccionada.totalGeneral || (ventaSeleccionada.totalEfectivo + ventaSeleccionada.totalTransferencia)) : 0;
+  const diferenciaCuadre = totalCajaReportado - totalProductosVendidos;
 
   return (
     <AdminLayout
@@ -211,15 +219,15 @@ export default function AdminVentas() {
 
       {/* --- MODAL DETALLE DE VENTA --- */}
       {isModalOpen && ventaSeleccionada && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
             <div className="p-4 border-b border-patilla-border flex justify-between items-center bg-gray-50">
               <div>
                 <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                  <ReceiptText size={18} /> Detalle de Venta — Reporte #{ventaSeleccionada.id}
+                  <ReceiptText size={18} /> Auditoría de Cierre \u2014 Reporte #{ventaSeleccionada.id}
                 </h3>
                 <p className="text-xs text-gray-500">
-                  {ventaSeleccionada.nombreLocal} • Vendedor: {ventaSeleccionada.nombreVendedor} • {new Date(ventaSeleccionada.fecha).toLocaleString('es-CO')}
+                  {ventaSeleccionada.nombreLocal} • Vendedor: <strong>{ventaSeleccionada.nombreVendedor}</strong> • {new Date(ventaSeleccionada.fecha).toLocaleString('es-CO')}
                 </p>
               </div>
               <button
@@ -231,41 +239,85 @@ export default function AdminVentas() {
             </div>
 
             <div className="p-6 space-y-6 overflow-y-auto">
-              {/* Tarjetas Totales */}
-              <div className="grid grid-cols-3 gap-3 bg-patilla-bg p-3 rounded-lg border border-patilla-border">
-                <div className="text-center">
-                  <span className="text-xs text-gray-500 block">Total Efectivo</span>
-                  <span className="font-bold text-gray-800 text-sm">
-                    {formatearDinero(ventaSeleccionada.totalEfectivo)}
-                  </span>
+              {/* Tarjetas Totales Reportados en Caja */}
+              <div>
+                <h4 className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <Banknote size={15} className="text-green-700" /> Dinero Reportado en Caja
+                </h4>
+                <div className="grid grid-cols-3 gap-3 bg-patilla-bg p-3 rounded-lg border border-patilla-border">
+                  <div className="text-center">
+                    <span className="text-xs text-gray-500 block">Efectivo Físico</span>
+                    <span className="font-bold text-gray-800 text-sm">
+                      {formatearDinero(ventaSeleccionada.totalEfectivo)}
+                    </span>
+                  </div>
+                  <div className="text-center border-x border-patilla-border">
+                    <span className="text-xs text-gray-500 block">Transferencias (Nequi/Davi)</span>
+                    <span className="font-bold text-gray-800 text-sm">
+                      {formatearDinero(ventaSeleccionada.totalTransferencia)}
+                    </span>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-xs text-gray-500 block font-semibold">Total en Caja</span>
+                    <span className="font-extrabold text-green-800 text-sm">
+                      {formatearDinero(totalCajaReportado)}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-center border-x border-patilla-border">
-                  <span className="text-xs text-gray-500 block">Total Transferencias</span>
-                  <span className="font-bold text-gray-800 text-sm">
-                    {formatearDinero(ventaSeleccionada.totalTransferencia)}
+              </div>
+
+              {/* Comparativa / Relación entre Caja y Productos */}
+              <div className="p-3.5 bg-gray-50 border border-patilla-border rounded-xl space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-gray-700 flex items-center gap-1.5">
+                    <Scale size={14} className="text-gray-500" /> Relación y Cuadre de Turno:
                   </span>
+                  {diferenciaCuadre === 0 ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-800 text-xs font-bold rounded-full border border-green-300">
+                      <CheckCircle2 size={13} /> Cuadre Perfecto ($0 de diferencia)
+                    </span>
+                  ) : diferenciaCuadre > 0 ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded-full border border-blue-300">
+                      <CheckCircle2 size={13} /> Sobrante en caja (+{formatearDinero(diferenciaCuadre)})
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-yellow-100 text-yellow-900 text-xs font-bold rounded-full border border-yellow-300">
+                      <AlertTriangle size={13} /> Descuadre en caja (-{formatearDinero(Math.abs(diferenciaCuadre))})
+                    </span>
+                  )}
                 </div>
-                <div className="text-center">
-                  <span className="text-xs text-gray-500 block">Total General</span>
-                  <span className="font-extrabold text-green-700 text-sm">
-                    {formatearDinero(ventaSeleccionada.totalGeneral)}
-                  </span>
+
+                <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-gray-200">
+                  <div className="p-2 bg-white rounded border border-gray-200 flex justify-between items-center">
+                    <span className="text-gray-500">Total según Caja:</span>
+                    <strong className="text-gray-800">{formatearDinero(totalCajaReportado)}</strong>
+                  </div>
+                  <div className="p-2 bg-white rounded border border-gray-200 flex justify-between items-center">
+                    <span className="text-gray-500">Total según Productos:</span>
+                    <strong className="text-patilla-primary-hover font-bold">{formatearDinero(totalProductosVendidos)}</strong>
+                  </div>
                 </div>
               </div>
 
               {/* Productos Vendidos */}
               <div>
-                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <ShoppingBag size={15} className="text-patilla-primary" /> Productos Vendidos
-                </h4>
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <ShoppingBag size={15} className="text-patilla-primary" /> Productos Vendidos
+                  </h4>
+                  <span className="text-xs font-extrabold text-gray-800 bg-patilla-bg border border-patilla-border px-2.5 py-0.5 rounded">
+                    Total Productos: {formatearDinero(totalProductosVendidos)}
+                  </span>
+                </div>
+
                 {ventaSeleccionada.detalles && ventaSeleccionada.detalles.length > 0 ? (
                   <div className="border border-patilla-border rounded-lg overflow-hidden">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead className="bg-patilla-bg text-gray-500 uppercase">
                         <tr>
-                          <th className="p-2.5">Producto</th>
-                          <th className="p-2.5 text-center">Cantidad</th>
-                          <th className="p-2.5 text-right">Subtotal</th>
+                          <th className="p-2.5 font-semibold">Producto</th>
+                          <th className="p-2.5 text-center font-semibold">Cantidad</th>
+                          <th className="p-2.5 text-right font-semibold">Subtotal</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -294,9 +346,9 @@ export default function AdminVentas() {
                     <table className="w-full text-left text-xs border-collapse">
                       <thead className="bg-patilla-bg text-gray-500 uppercase">
                         <tr>
-                          <th className="p-2.5">Insumo</th>
-                          <th className="p-2.5 text-center">Unidad</th>
-                          <th className="p-2.5 text-right">Cantidad Gastada</th>
+                          <th className="p-2.5 font-semibold">Insumo</th>
+                          <th className="p-2.5 text-center font-semibold">Unidad</th>
+                          <th className="p-2.5 text-right font-semibold">Cantidad Gastada</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -332,7 +384,7 @@ export default function AdminVentas() {
               <button
                 type="button"
                 onClick={() => { setIsModalOpen(false); setVentaSeleccionada(null); }}
-                className="px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded transition-colors"
+                className="px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition-colors"
               >
                 Cerrar
               </button>

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using PatillaDash.Api.Filters;
@@ -45,12 +46,12 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// Política CORS para Vite SPA
+// Política CORS flexible para desarrollo en red local (Wi-Fi / Celulares)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
+        policy.SetIsOriginAllowed(_ => true)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -61,10 +62,14 @@ builder.Services.AddCors(options =>
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
-// Controladores con Filtro de Validación FluentValidation
+// Controladores con Filtro de Validación FluentValidation y soporte Enums en JSON
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ValidationFilter>();
+})
+.AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 
 // OpenAPI & Documentación
@@ -103,8 +108,6 @@ if (app.Environment.IsDevelopment())
                .WithDefaultHttpClient(ScalarTarget.JavaScript, ScalarClient.Axios);
     });
 }
-
-app.UseHttpsRedirection();
 
 app.UseCors("AllowFrontend");
 

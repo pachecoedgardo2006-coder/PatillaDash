@@ -6,6 +6,7 @@ public interface IInventarioRepository
 {
     Task<InventarioLocal?> GetByLocalAndSuministroAsync(int localId, int suministroId);
     Task<IEnumerable<InventarioLocal>> GetByLocalIdAsync(int localId);
+    Task<IEnumerable<InventarioLocal>> GetAllAsync();
     Task AddAsync(InventarioLocal inventario);
     Task UpdateAsync(InventarioLocal inventario);
 }

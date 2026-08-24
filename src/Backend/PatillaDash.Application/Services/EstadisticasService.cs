@@ -9,15 +9,18 @@ public class EstadisticasService : IEstadisticasService
     private readonly IVentaRepository _ventaRepository;
     private readonly ICompraRepository _compraRepository;
     private readonly IPagoEmpleadoRepository _pagoRepository;
+    private readonly IInventarioRepository _inventarioRepository;
 
     public EstadisticasService(
         IVentaRepository ventaRepository,
         ICompraRepository compraRepository,
-        IPagoEmpleadoRepository pagoRepository)
+        IPagoEmpleadoRepository pagoRepository,
+        IInventarioRepository inventarioRepository)
     {
         _ventaRepository = ventaRepository;
         _compraRepository = compraRepository;
         _pagoRepository = pagoRepository;
+        _inventarioRepository = inventarioRepository;
     }
 
     public async Task<DashboardEstadisticasDto> ObtenerDashboardGeneralAsync(DateTime? fechaInicio = null, DateTime? fechaFin = null)
@@ -28,6 +31,7 @@ public class EstadisticasService : IEstadisticasService
         var ventas = await _ventaRepository.GetAllByDateRangeAsync(desde, hasta);
         var compras = await _compraRepository.GetAllByDateRangeAsync(desde, hasta);
         var pagos = await _pagoRepository.GetAllByDateRangeAsync(desde, hasta);
+        var inventarios = await _inventarioRepository.GetAllAsync();
 
         decimal totalEfectivo = ventas.Sum(v => v.TotalEfectivo);
         decimal totalTransferencia = ventas.Sum(v => v.TotalTransferencia);
@@ -54,6 +58,20 @@ public class EstadisticasService : IEstadisticasService
             .OrderByDescending(r => r.TotalVentas)
             .ToList();
 
+        var insumosEnAlerta = inventarios
+            .Where(i => i.Suministro != null && i.CantidadDisponible <= i.Suministro.StockMinimoAlerta)
+            .Select(i => new AlertaStockDto
+            {
+                LocalId = i.LocalId,
+                NombreLocal = i.Local?.Nombre ?? $"Local #{i.LocalId}",
+                SuministroId = i.SuministroId,
+                NombreSuministro = i.Suministro?.Nombre ?? $"Suministro #{i.SuministroId}",
+                UnidadMedida = i.Suministro?.UnidadMedida.ToString() ?? "Unidades",
+                CantidadDisponible = i.CantidadDisponible,
+                StockMinimoAlerta = i.Suministro?.StockMinimoAlerta ?? 0
+            })
+            .ToList();
+
         return new DashboardEstadisticasDto
         {
             TotalIngresos = totalIngresos,
@@ -66,7 +84,8 @@ public class EstadisticasService : IEstadisticasService
                 TotalEfectivo = totalEfectivo,
                 TotalTransferencia = totalTransferencia
             },
-            RankingLocales = rankingLocales
+            RankingLocales = rankingLocales,
+            InsumosEnAlerta = insumosEnAlerta
         };
     }
 }

@@ -35,4 +35,13 @@ public class AuthController : ControllerBase
         var response = await _authService.RegisterAsync(dto);
         return Ok(response);
     }
+
+    [HttpGet("usuarios")]
+    [Authorize(Roles = "Administrador")]
+    [ProducesResponseType(typeof(IEnumerable<UsuarioDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ObtenerUsuarios([FromQuery] int? localId)
+    {
+        var usuarios = await _authService.ObtenerUsuariosAsync(localId);
+        return Ok(usuarios);
+    }
 }

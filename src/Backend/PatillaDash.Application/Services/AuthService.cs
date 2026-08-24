@@ -72,4 +72,23 @@ public class AuthService : IAuthService
             LocalId = usuario.LocalId ?? 0
         };
     }
+
+    public async Task<IEnumerable<UsuarioDto>> ObtenerUsuariosAsync(int? localId = null)
+    {
+        var usuarios = await _usuarioRepository.GetAllAsync();
+        if (localId.HasValue && localId.Value > 0)
+        {
+            usuarios = usuarios.Where(u => u.LocalId == localId.Value);
+        }
+
+        return usuarios.Select(u => new UsuarioDto
+        {
+            Id = u.Id,
+            Nombre = u.Nombre,
+            Email = u.Email,
+            Rol = u.Rol.ToString(),
+            LocalId = u.LocalId,
+            NombreLocal = u.Local?.Nombre ?? (u.LocalId.HasValue ? $"Local #{u.LocalId}" : "Global")
+        });
+    }
 }

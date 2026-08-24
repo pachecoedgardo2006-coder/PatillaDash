@@ -18,4 +18,20 @@ public class DashboardEstadisticasDto
 
     public VentasPorMetodoPagoDto VentasMetodoPago { get; set; } = new();
     public List<RankingLocalDto> RankingLocales { get; set; } = new();
+
+    /// <summary>
+    /// Lista de insumos que se encuentran por debajo o igual al stock mínimo de alerta en cualquier local.
+    /// </summary>
+    public List<AlertaStockDto> InsumosEnAlerta { get; set; } = new();
+}
+
+public class AlertaStockDto
+{
+    public int LocalId { get; set; }
+    public string NombreLocal { get; set; } = string.Empty;
+    public int SuministroId { get; set; }
+    public string NombreSuministro { get; set; } = string.Empty;
+    public string UnidadMedida { get; set; } = string.Empty;
+    public decimal CantidadDisponible { get; set; }
+    public decimal StockMinimoAlerta { get; set; }
 }
