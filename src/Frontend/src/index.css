@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@theme {
+  --color-patilla-bg: #F9FAFB;
+  --color-patilla-text: #4B5563;
+  --color-patilla-primary: #FFB3B3;
+  --color-patilla-primary-hover: #FFA4A4;
+  --color-patilla-secondary: #A7D7C5;
+  --color-patilla-alert: #FDE047;
+  --color-patilla-border: #E5E7EB;
+
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
+}
+
+body {
+  background-color: var(--color-patilla-bg);
+  color: var(--color-patilla-text);
+  font-family: system-ui, -apple-system, sans-serif;
+}
