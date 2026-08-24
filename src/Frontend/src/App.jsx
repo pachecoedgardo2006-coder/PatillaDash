@@ -10,7 +10,9 @@ import VendedorDashboard from './pages/VendedorDashboard';
 
 // Páginas de Administrador
 import AdminDashboard from './pages/AdminDashboard';
+import AdminVentas from './pages/AdminVentas';
 import AdminInventario from './pages/AdminInventario';
+import AdminCompras from './pages/AdminCompras';
 import AdminPagos from './pages/AdminPagos';
 
 export default function App() {
@@ -40,12 +42,30 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
+          <Route
+            path="/admin/ventas"
+            element={
+              <ProtectedRoute allowedRoles={['Administrador']}>
+                <AdminVentas />
+              </ProtectedRoute>
+            }
+          />
           
           <Route
             path="/admin/inventario"
             element={
               <ProtectedRoute allowedRoles={['Administrador']}>
                 <AdminInventario />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/compras"
+            element={
+              <ProtectedRoute allowedRoles={['Administrador']}>
+                <AdminCompras />
               </ProtectedRoute>
             }
           />
@@ -59,7 +79,7 @@ export default function App() {
             }
           />
 
-          {/* Ruta por defecto (Redirige al login si la URL no existe) */}
+          {/* Ruta por defecto */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>

@@ -4,7 +4,9 @@ using Microsoft.IdentityModel.Tokens;
 using PatillaDash.Api.Filters;
 using PatillaDash.Api.Middleware;
 using PatillaDash.Application;
+using PatillaDash.Application.Interfaces;
 using PatillaDash.Infrastructure;
+using PatillaDash.Infrastructure.Persistence;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -69,6 +71,23 @@ builder.Services.AddControllers(options =>
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+// Inicializar y sembrar Base de Datos automáticamente
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<PatillaDbContext>();
+        var passwordHasher = services.GetRequiredService<IPasswordHasher>();
+        await DbInitializer.SeedAsync(context, passwordHasher);
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Ocurrió un error al sembrar la base de datos.");
+    }
+}
 
 // Pipeline de manejo de errores
 app.UseExceptionHandler();

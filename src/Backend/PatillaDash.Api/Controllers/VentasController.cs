@@ -47,6 +47,28 @@ public class VentasController : ControllerBase
         return Ok(resultado);
     }
 
+    [HttpGet]
+    [Authorize(Roles = "Administrador")]
+    [ProducesResponseType(typeof(IEnumerable<VentaResumenDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ObtenerHistorialVentas([FromQuery] int? localId)
+    {
+        var ventas = await _ventaService.ObtenerHistorialVentasAsync(localId);
+        return Ok(ventas);
+    }
+
+    [HttpGet("{id:int}")]
+    [Authorize(Roles = "Administrador,Vendedor")]
+    [ProducesResponseType(typeof(VentaResumenDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ObtenerDetalleVenta([FromRoute] int id)
+    {
+        var venta = await _ventaService.ObtenerDetalleVentaAsync(id);
+        if (venta == null)
+            return NotFound(new { message = $"No se encontró la venta con ID {id}." });
+
+        return Ok(venta);
+    }
+
     [HttpGet("local/{localId:int}")]
     [Authorize(Roles = "Administrador,Vendedor")]
     [ProducesResponseType(typeof(IEnumerable<VentaResumenDto>), StatusCodes.Status200OK)]

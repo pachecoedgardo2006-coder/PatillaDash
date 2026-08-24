@@ -1,523 +1,252 @@
 # 🍉 PatillaDash — Plataforma de Gestión Multi-Local de Bebidas Artesanales
 
-Bienvenido al repositorio central de **PatillaDash**, una solución web moderna diseñada para la administración y operación de puntos de venta de bebidas artesanales de patilla (*"patillazos"*), jugos naturales y refrescos.
+Bienvenido al repositorio central de **PatillaDash**, una solución web full-stack moderna y desacoplada para la administración, ventas, abastecimiento e inventario de puntos de venta de jugos y bebidas artesanales de patilla (*"patillazos"*), refrescos y granizados.
 
 ---
 
 ## 📑 Tabla de Contenidos
 1. [Visión y Modelo de Negocio](#-visión-y-modelo-de-negocio)
-2. [Arquitectura del Sistema](#-arquitectura-del-sistema)
-3. [Stack Tecnológico](#-stack-tecnológico)
-4. [Guía de Inicio Rápido (Backend)](#-guía-de-inicio-rápido-backend)
-5. [Guía de Integración para Frontend](#-guía-de-integración-para-frontend)
-   - [Configuración de Conexión y CORS](#configuración-de-conexión-y-cors)
-   - [Autenticación JWT y Manejo de Sesión](#autenticación-jwt-y-manejo-de-sesión)
-   - [Manejo de Errores Estandarizado (RFC 7807)](#manejo-de-errores-estandarizado-rfc-7807)
-   - [Ejemplo de Cliente Axios](#ejemplo-de-cliente-axios)
-6. [Contratos de API y Endpoints (Referencia Completa)](#-contratos-de-api-y-endpoints)
-   - [Módulo de Autenticación (`/api/auth`)](#1-módulo-de-autenticación-apiauth)
-   - [Módulo de Ventas Diarias (`/api/ventas`)](#2-módulo-de-ventas-diarias-apiventas)
-   - [Módulo de Inventario (`/api/inventario`)](#3-módulo-de-inventario-apiinventario)
-   - [Módulo de Compras (`/api/compras`)](#4-módulo-de-compras-apicompras)
-   - [Módulo de Pagos y Nómina (`/api/pagos`)](#5-módulo-de-pagos-y-nómina-apipagos)
-   - [Módulo de Estadísticas y Dashboard (`/api/estadisticas`)](#6-módulo-de-estadísticas-y-dashboard-apiestadisticas)
-7. [Documentación Interactiva (Scalar OpenAPI)](#-documentación-interactiva-scalar-openapi)
-8. [Ejecución de Pruebas Automatizadas](#-ejecución-de-pruebas-automatizadas)
-9. [Estructura del Proyecto](#-estructura-del-proyecto)
+2. [Stack Tecnológico](#-stack-tecnológico)
+3. [Arquitectura del Sistema](#-arquitectura-del-sistema)
+4. [Credenciales por Defecto (Seed Automático)](#-credenciales-por-defecto-seed-automático)
+5. [Guía de Inicio Rápido (Paso a Paso)](#-guía-de-inicio-rápido)
+   - [Paso 1: Iniciar el Backend (.NET 10 API)](#paso-1-iniciar-el-backend-net-10-api)
+   - [Paso 2: Iniciar el Frontend (React 19 + Vite)](#paso-2-iniciar-el-frontend-react-19--vite)
+6. [Módulos y Vistas de la Aplicación](#-módulos-y-vistas-de-la-aplicación)
+   - [Panel del Vendedor (Mobile-First)](#1-panel-del-vendedor-mobile-first)
+   - [Panel del Administrador](#2-panel-del-administrador)
+7. [Contratos de API y Endpoints](#-contratos-de-api-y-endpoints)
+8. [Documentación Interactiva (Scalar OpenAPI)](#-documentación-interactiva-scalar-openapi)
+9. [Pruebas Automatizadas (Testing)](#-pruebas-automatizadas)
+10. [Estructura del Repositorio](#-estructura-del-repositorio)
 
 ---
 
 ## 🍉 Visión y Modelo de Negocio
 
-El negocio de bebidas de patilla artesanal opera bajo el principio de **"Registro de Operación Diaria por Declaración"**:
-* Debido a la variabilidad natural del tamaño y rendimiento de las frutas, el inventario **no** se descuenta con recetas teóricas automáticas por vaso vendido.
-* **Cierre de Turno del Vendedor:** Al finalizar la jornada, el vendedor declara las ventas reales desglosadas por medio de pago (**Efectivo** vs. **Transferencias / Nequi / Daviplata**) y la **cantidad exacta de insumos consumidos** (ej. 3 patillas, 40 vasos, 2 kg de azúcar).
-* **Consolidación del Administrador:** El Administrador supervisa el inventario de todos los locales con alertas de stock crítico, ingresa compras de insumos (que aumentan el inventario automáticamente), gestiona pagos a colaboradores y visualiza los balances financieros consolidados.
+El negocio de bebidas artesanales opera bajo el principio de **"Registro de Operación Diaria por Declaración"**:
+* **Naturaleza de la materia prima:** Debido a la variabilidad natural del tamaño y rendimiento de las patillas/frutas, el inventario **no** se descuenta con recetas teóricas automáticas por vaso servido.
+* **Cierre de Turno del Vendedor:** Al finalizar la jornada, el colaborador declara los totales recibidos en caja (**Efectivo** vs. **Transferencias / Nequi / Daviplata**), los productos vendidos y la **cantidad exacta de insumos consumidos** (ej. 4 patillas, 45 vasos 16oz, 2 kg de azúcar). Al enviar el formulario, el backend descuenta en tiempo real los insumos del stock de la sede.
+* **Consolidación del Administrador:** El Administrador supervisa el inventario de todas las sedes con alertas de stock crítico, ingresa compras de materia prima (que suman inventario automáticamente), gestiona nómina/pagos y analiza métricas de rentabilidad.
 
 ### Matriz de Roles y Permisos
 
-| Rol | Alcance | Módulos Habilitados |
+| Rol | Alcance | Vistas y Permisos Habilitados |
 | :--- | :--- | :--- |
-| **Vendedor** | Solo su local asignado (`LocalId`) | • Formulario de Cierre Diario (Ventas por categoría + Insumos gastados + Novedades).<br>• Consulta de stock de su propio local. |
-| **Administrador** | Global (Todos los locales) | • Monitoreo multilocal de stock con alertas mínimas.<br>• Gestión de pagos y anticipos a personal.<br>• Entrada de facturas/compras con recarga automática de stock.<br>• Dashboard financiero (Ingresos, Gastos, Margen Neto, Ratios). |
+| **Vendedor** | Solo su local asignado (`LocalId`) | • Formulario de Cierre de Turno (Efectivo, Transferencias, Productos e Insumos consumidos).<br>• Monitoreo de stock de su sede.<br>• Historial de turnos recientes. |
+| **Administrador** | Global (Todas las sedes) | • **Dashboard:** Balance Neto, Ingresos, Gastos (Compras + Nómina) y Ranking de Sedes.<br>• **Ventas y Cierres:** Historial completo con modal de auditoría de detalle.<br>• **Inventario:** Stock en tiempo real, alertas de stock crítico y ajuste manual.<br>• **Compras:** Registro de facturas con suma automática de inventario.<br>• **Personal y Nómina:** Registro de nuevos colaboradores y comprobantes de pago. |
 
 ---
 
-## 🏛 Arquitectura del Sistema
+## 🛠️ Stack Tecnológico
 
-El backend está construido bajo los principios de **Clean Architecture (Onion Architecture)** y **Domain-Driven Design (DDD)** para garantizar total desacoplamiento de la infraestructura:
+### Backend
+* **Runtime:** .NET 10.0 (C# 13)
+* **Framework:** ASP.NET Core Web API
+* **Arquitectura:** Clean Architecture (Domain-Driven Design)
+* **ORM:** Entity Framework Core 10 (SQLite con migraciones y seeder automático)
+* **Seguridad:** JWT Bearer Authentication + Hasheo de contraseñas con `BCrypt.Net-Next`
+* **Validación:** FluentValidation + Filtro global de validación
+* **Manejo de Errores:** RFC 7807 `ProblemDetails` / `ValidationProblemDetails`
+* **Documentación:** OpenAPI con `Scalar API Reference`
+* **Testing:** xUnit, Moq, FluentAssertions (22 pruebas unitarias y de integración)
+
+### Frontend
+* **Entorno & Build Tool:** Node.js + Vite 8
+* **Librería UI:** React 19 SPA
+* **Enrutamiento:** React Router DOM v7 con `ProtectedRoute` y Guards por Rol
+* **Estilos:** Tailwind CSS v4 con paleta temática personalizada (`patilla-*`)
+* **Iconografía:** Lucide React
+* **Cliente HTTP:** Axios con interceptores para inyección de JWT y captura de 401
+
+---
+
+## 🏛️ Arquitectura del Sistema
 
 ```mermaid
 graph TD
-    UI[Frontend Vite / Vanilla JS SPA] -->|HTTP / JSON + JWT| API[PatillaDash.Api]
-    API --> APP[PatillaDash.Application]
-    API --> INFRA[PatillaDash.Infrastructure]
-    INFRA --> APP
-    APP --> DOMAIN[PatillaDash.Domain]
-    INFRA --> DOMAIN
-    INFRA --> DB[(SQLite Database)]
+    Client[Frontend React 19 SPA] -->|HTTP REST / JSON + Bearer JWT| API[PatillaDash.Api]
+    API --> Application[PatillaDash.Application]
+    API --> Infrastructure[PatillaDash.Infrastructure]
+    Infrastructure --> Application
+    Application --> Domain[PatillaDash.Domain]
+    Infrastructure --> Domain
+    Infrastructure --> DB[(Base de Datos SQLite)]
 ```
 
-* **`PatillaDash.Domain`:** Entidades ricas, reglas de invariantes, validaciones de dominio, enums e interfaces de repositorios. *Sin dependencias externas.*
-* **`PatillaDash.Application`:** Casos de uso, servicios de aplicación, DTOs de entrada/salida y validadores con `FluentValidation`.
-* **`PatillaDash.Infrastructure`:** Persistencia con `EF Core 10 SQLite`, configuración Fluent API, implementaciones de repositorios, `BCrypt` Hasher y generador de tokens JWT.
-* **`PatillaDash.Api`:** Controladores RESTful delgados, filtros globales de validación, middlewares RFC 7807 (`ProblemDetails`), configuración de CORS y documentación interactiva Scalar.
+* **`PatillaDash.Domain`:** Entidades ricas (`Usuario`, `Local`, `Suministro`, `Producto`, `RegistroVentaDiaria`, `Compra`, `PagoEmpleado`), enums e interfaces de repositorios. Sin dependencias externas.
+* **`PatillaDash.Application`:** Casos de uso, DTOs, servicios de aplicación y validadores `FluentValidation`.
+* **`PatillaDash.Infrastructure`:** Persistencia EF Core, migraciones, DbInitializer (seed automático), repositorios, JWT Token Generator y Password Hasher.
+* **`PatillaDash.Api`:** Controladores RESTful, filtros, middlewares RFC 7807, CORS y documentación Scalar.
+* **`src/Frontend`:** Single Page Application (SPA) responsiva construida con componentes modulares y diseño limpio.
 
 ---
 
-## 🛠 Stack Tecnológico
+## 🔑 Credenciales por Defecto (Seed Automático)
 
-### Backend
-* **Runtime:** .NET 10 (C# 13)
-* **Framework:** ASP.NET Core Web API
-* **ORM:** Entity Framework Core 10 (SQLite)
-* **Autenticación:** JWT Bearer + BCrypt.Net-Next
-* **Validación:** FluentValidation + Filtro global
-* **Documentación:** OpenAPI + Scalar API Reference
-* **Testing:** xUnit, Moq, FluentAssertions
+Al iniciar el Backend por primera vez, el sistema crea automáticamente las tablas en SQLite y precarga los usuarios, sedes, productos e insumos de prueba:
 
-### Frontend (Stack Recomendado para la Fase SPA)
-* **Entorno:** Node.js + Vite.js
-* **Lenguaje:** JavaScript ES6+ Modules (SPA sin frameworks pesados)
-* **Estilos:** Tailwind CSS v3/v4 + PostCSS
-* **Cliente HTTP:** Axios con interceptores Bearer Token
+| Rol | Correo Electrónico | Contraseña | Sede Asignada |
+| :--- | :--- | :--- | :--- |
+| **Administrador** | `admin@patilladash.com` | `Admin123!` | Global (Acceso a todas las sedes) |
+| **Vendedor** | `carlos@patilladash.com` | `Vendedor123!` | Sede Centro (Local #1) |
 
 ---
 
-## 🚀 Guía de Inicio Rápido (Backend)
+## 🚀 Guía de Inicio Rápido
 
 ### Requisitos Previos
-* [.NET 10 SDK](https://dotnet.microsoft.com/download) instalado.
-
-### 1. Clonar el Repositorio
-```bash
-git clone https://github.com/tu-usuario/PatillaDash.git
-cd PatillaDash
-```
-
-### 2. Restaurar Dependencias y Compilar
-```bash
-dotnet restore
-dotnet build
-```
-
-### 3. Aplicar Migraciones de Base de Datos
-La base de datos SQLite `patilladash.db` se crea automáticamente con la migración inicial:
-```bash
-dotnet ef database update --project src/Backend/PatillaDash.Infrastructure/PatillaDash.Infrastructure.csproj --startup-project src/Backend/PatillaDash.Api/PatillaDash.Api.csproj
-```
-
-### 4. Ejecutar el Servidor API
-```bash
-dotnet run --project src/Backend/PatillaDash.Api/PatillaDash.Api.csproj
-```
-El servidor quedará disponible en:
-* **HTTP:** `http://localhost:5136`
-* **HTTPS:** `https://localhost:7057`
-* **Scalar API Docs:** [`http://localhost:5136/scalar/v1`](http://localhost:5136/scalar/v1)
+* [.NET 10 SDK](https://dotnet.microsoft.com/download) instalado (`dotnet --version`).
+* [Node.js](https://nodejs.org/) v20+ y `npm` instalados (`node -v`, `npm -v`).
 
 ---
 
-## 🌐 Guía de Integración para Frontend
+### Paso 1: Iniciar el Backend (.NET 10 API)
 
-Esta sección detalla cómo debe comunicarse la aplicación cliente (Vite SPA) con la API de PatillaDash.
+Abre una terminal y ejecuta:
 
-### Configuración de Conexión y CORS
-La API ya tiene configurada una política CORS permisiva para el entorno de desarrollo frontend en los puertos estándar de Vite:
-* `http://localhost:5173`
-* `http://127.0.0.1:5173`
+```bash
+cd src/Backend/PatillaDash.Api
+dotnet run
+```
 
-> **URL Base para peticiones HTTP:** `http://localhost:5136/api`
+> **La API se ejecutará en:** `http://localhost:5136`  
+> **Documentación interactiva (Scalar):** [`http://localhost:5136/scalar/v1`](http://localhost:5136/scalar/v1)
 
 ---
 
-### Autenticación JWT y Manejo de Sesión
+### Paso 2: Iniciar el Frontend (React 19 + Vite)
 
-1. Al realizar `POST /api/auth/login`, la API retorna:
-   ```json
-   {
-     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-     "nombre": "Juan Pérez",
-     "email": "vendedor@patilladash.com",
-     "rol": "Vendedor",
-     "localId": 1
-   }
-   ```
-2. **Almacenamiento:** Guardar el `token` en `localStorage` o `sessionStorage`.
-3. **Claims embebidos en el JWT:**
-   * `sub` / `email`: Correo electrónico.
-   * `name`: Nombre del usuario.
-   * `role`: Rol del usuario (`Administrador` o `Vendedor`).
-   * `UsuarioId`: Identificador entero del usuario.
-   * `LocalId`: Identificador del local asignado (`0` o `null` para Administradores).
-4. **Header de Autorización:** Para todas las rutas protegidas, adjuntar el header:
-   ```http
-   Authorization: Bearer <TOKEN_JWT>
-   ```
-5. **Route Guards en Frontend:**
-   * Si no hay token guardado $\rightarrow$ Redirigir a `/login`.
-   * Si `rol === "Vendedor"` $\rightarrow$ Permitir solo vista de registro diario y consulta de inventario de su local.
-   * Si `rol === "Administrador"` $\rightarrow$ Permitir acceso a compras, inventario general, pagos y dashboard.
+Abre una **segunda terminal** y ejecuta:
+
+```bash
+cd src/Frontend
+npm install
+npm run dev
+```
+
+> **La aplicación cliente estará lista en:** [`http://localhost:5173`](http://localhost:5173)
 
 ---
 
-### Manejo de Errores Estandarizado (RFC 7807)
+## 🖥️ Módulos y Vistas de la Aplicación
 
-La API devuelve errores en formato estándar `ProblemDetails` / `ValidationProblemDetails`:
+### 1. Panel del Vendedor (`/vendedor`)
+Diseñado con enfoque mobile-first para facilitar la agilidad al cierre de turno:
+* **Totales en Caja:** Captura de dinero en efectivo y transferencias electrónicas (Nequi / Daviplata).
+* **Desglose de Productos:** Registro de cantidades vendidas de vasos 16oz, 24oz, jarras familiares y refrescos con cálculo de subtotal en vivo.
+* **Insumos Gastados:** Declaración de patillas, vasos, azúcar y bolsas de hielo utilizadas durante la jornada (se descuentan del stock al enviar).
+* **Novedades:** Campo de observaciones para incidencias o averías.
+* **Historial Reciente:** Lista de los últimos cierres de la sede con montos y fechas.
 
-#### 1. Error de Validación (HTTP 400 Bad Request)
-```json
-{
-  "title": "Errores de validación",
-  "status": 400,
-  "errors": {
-    "Email": ["'Email' no es una dirección de correo electrónico válida."],
-    "Password": ["'Password' debe ser de al menos 6 caracteres."]
-  }
-}
-```
-
-#### 2. Error de Negocio o Excepción (HTTP 400 / 500)
-```json
-{
-  "title": "Error de Operación",
-  "status": 400,
-  "detail": "Stock insuficiente. Disponible: 2, Requerido: 5"
-}
-```
-
----
-
-### Ejemplo de Cliente Axios
-
-Configuración recomendada para `src/services/api.js`:
-
-```javascript
-import axios from 'axios';
-
-const api = axios.create({
-  baseURL: 'http://localhost:5136/api',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Interceptor: Inyectar JWT automáticamente
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Interceptor: Manejo de respuestas 401 (Sesión expirada)
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
-
-export default api;
-```
+### 2. Panel del Administrador
+* **Dashboard (`/admin`):**
+  * KPIs clave: Ingresos Totales, Gastos Totales (Compras + Nómina) y Balance Neto.
+  * Ranking de ventas consolidado por local.
+  * Participación porcentual de Efectivo vs. Transferencias y método predominante.
+* **Ventas y Cierres (`/admin/ventas`):**
+  * Historial consolidado de ventas de todas las sedes con filtro por local.
+  * **Modal de Detalle Completo:** Inspección profunda de cada venta con los productos comercializados, insumos descontados del inventario y notas del vendedor.
+* **Inventario General (`/admin/inventario`):**
+  * Monitoreo de stock por sede con buscador de insumos.
+  * Badges de alerta en tiempo real (`Stock Crítico` vs `Óptimo`).
+  * Modal para **Ajuste Manual de Stock**.
+* **Compras y Entradas (`/admin/compras`):**
+  * Formulario de compra de materia prima con **incremento automático de stock**.
+  * Historial de facturas y gastos en compras por sede.
+* **Personal y Pagos (`/admin/pagos`):**
+  * Modal para registrar nuevos vendedores con asignación de sede.
+  * Modal para registrar pagos de sueldos o anticipos con guardado en historial de nómina.
 
 ---
 
 ## 📡 Contratos de API y Endpoints
 
-### 1. Módulo de Autenticación (`/api/auth`)
+Todos los endpoints (salvo `/api/auth/login`) requieren header `Authorization: Bearer <TOKEN_JWT>`.
 
-#### `POST /api/auth/login`
-* **Acceso:** Público
-* **Request Body:**
-  ```json
-  {
-    "email": "admin@patilladash.com",
-    "password": "Password123!"
-  }
-  ```
-* **Response (200 OK):**
-  ```json
-  {
-    "token": "eyJhbGciOi...",
-    "nombre": "Admin Principal",
-    "email": "admin@patilladash.com",
-    "rol": "Administrador",
-    "localId": 0
-  }
-  ```
+### 1. Autenticación (`/api/auth`)
+* `POST /api/auth/login`: Autentica usuario y devuelve JWT con claims de rol y local.
+* `POST /api/auth/register`: Registra un nuevo colaborador (Admin o Vendedor).
 
-#### `POST /api/auth/register`
-* **Acceso:** Público / Admin
-* **Request Body:**
-  ```json
-  {
-    "nombre": "Carlos Vendedor",
-    "email": "carlos@patilladash.com",
-    "password": "Password123!",
-    "rol": 1, 
-    "localId": 1
-  }
-  ```
-  *(Nota: `rol`: `0 = Administrador`, `1 = Vendedor`)*
+### 2. Ventas Diarias (`/api/ventas`)
+* `POST /api/ventas/diaria`: Registra el cierre diario de caja y descuenta insumos.
+* `GET /api/ventas`: Retorna el historial de ventas (opcionalmente filtrado por `?localId=...`) *(Solo Administrador)*.
+* `GET /api/ventas/{id}`: Retorna el detalle completo de una venta específica con productos e insumos.
+* `GET /api/ventas/local/{localId}`: Retorna las ventas del último mes de una sede.
 
----
+### 3. Inventario (`/api/inventario`)
+* `GET /api/inventario/local/{localId}`: Consulta el stock de suministros y alertas de un local.
+* `PUT /api/inventario/stock`: Actualiza manualmente las existencias de un insumo *(Solo Administrador)*.
 
-### 2. Módulo de Ventas Diarias (`/api/ventas`)
+### 4. Compras (`/api/compras`)
+* `POST /api/compras`: Registra compra de insumos e incrementa el stock disponible *(Solo Administrador)*.
+* `GET /api/compras?localId=...`: Historial de facturas de compras *(Solo Administrador)*.
 
-#### `POST /api/ventas/diaria`
-* **Acceso:** `Vendedor` o `Administrador`
-* **Descripción:** Registra el cierre del turno del vendedor con desglose de métodos de pago y consumo de suministros. **Descuenta automáticamente los insumos declarados del inventario.**
-* **Request Body:**
-  ```json
-  {
-    "localId": 1,
-    "vendedorId": 2,
-    "totalEfectivo": 180000,
-    "totalTransferencia": 45000,
-    "notas": "Día con alta demanda por la tarde. Todo en orden.",
-    "detalles": [
-      {
-        "productoId": 1,
-        "cantidadVendida": 30,
-        "subtotal": 150000
-      },
-      {
-        "productoId": 2,
-        "cantidadVendida": 15,
-        "subtotal": 75000
-      }
-    ],
-    "consumos": [
-      {
-        "suministroId": 1,
-        "cantidadGastada": 4
-      },
-      {
-        "suministroId": 2,
-        "cantidadGastada": 45
-      }
-    ]
-  }
-  ```
-* **Response (201 Created):**
-  ```json
-  {
-    "id": 1,
-    "localId": 1,
-    "vendedorId": 2,
-    "fecha": "2026-08-21T18:30:00Z",
-    "totalEfectivo": 180000,
-    "totalTransferencia": 45000,
-    "notas": "Día con alta demanda por la tarde. Todo en orden."
-  }
-  ```
+### 5. Pagos y Nómina (`/api/pagos`)
+* `POST /api/pagos`: Registra un pago de nómina o anticipo a un empleado *(Solo Administrador)*.
+* `GET /api/pagos/local/{localId}`: Historial de pagos realizados en un local *(Solo Administrador)*.
+* `GET /api/pagos/vendedor/{vendedorId}`: Historial de pagos de un colaborador.
 
-#### `GET /api/ventas/local/{localId}`
-* **Acceso:** `Vendedor` (su local) o `Administrador`
-* **Response (200 OK):** Lista de reportes diarios de ventas del local en el último mes.
-
----
-
-### 3. Módulo de Inventario (`/api/inventario`)
-
-#### `GET /api/inventario/local/{localId}`
-* **Acceso:** `Vendedor` (su local) o `Administrador`
-* **Response (200 OK):**
-  ```json
-  [
-    {
-      "suministroId": 1,
-      "nombreSuministro": "Patilla Entera",
-      "unidadMedida": "Unidades",
-      "cantidadDisponible": 4.5,
-      "stockMinimoAlerta": 5,
-      "enAlerta": true
-    },
-    {
-      "suministroId": 2,
-      "nombreSuministro": "Vaso 16oz",
-      "unidadMedida": "Unidades",
-      "cantidadDisponible": 120,
-      "stockMinimoAlerta": 50,
-      "enAlerta": false
-    }
-  ]
-  ```
-
-#### `PUT /api/inventario/stock`
-* **Acceso:** Solo `Administrador`
-* **Descripción:** Ajuste manual de existencias físicas.
-* **Request Body:**
-  ```json
-  {
-    "localId": 1,
-    "suministroId": 1,
-    "nuevaCantidad": 15
-  }
-  ```
-
----
-
-### 4. Módulo de Compras (`/api/compras`)
-
-#### `POST /api/compras`
-* **Acceso:** Solo `Administrador`
-* **Descripción:** Registra la compra de insumos/materia prima e **incrementa de forma atómica el stock disponible en el local destino**.
-* **Request Body:**
-  ```json
-  {
-    "localId": 1,
-    "suministroId": 1,
-    "cantidad": 10,
-    "costoTotal": 85000,
-    "proveedor": "Distribuidora Mayorista del Campo"
-  }
-  ```
-* **Response (201 Created):** Objeto `CompraResumenDto`.
-
-#### `GET /api/compras?localId=1`
-* **Acceso:** Solo `Administrador`
-* **Response (200 OK):** Historial de compras (filtrable opcionalmente por `localId`).
-
----
-
-### 5. Módulo de Pagos y Nómina (`/api/pagos`)
-
-#### `POST /api/pagos`
-* **Acceso:** Solo `Administrador`
-* **Descripción:** Registra un pago de sueldo diario, anticipo o bonificación a un colaborador.
-* **Request Body:**
-  ```json
-  {
-    "localId": 1,
-    "vendedorId": 2,
-    "monto": 60000,
-    "observacion": "Turno completo día viernes"
-  }
-  ```
-* **Response (201 Created):** Objeto `PagoResumenDto`.
-
-#### `GET /api/pagos/vendedor/{vendedorId}`
-* **Acceso:** Solo `Administrador`
-* **Response (200 OK):** Historial de pagos realizados a un vendedor específico.
-
-#### `GET /api/pagos/local/{localId}`
-* **Acceso:** Solo `Administrador`
-* **Response (200 OK):** Historial de pagos realizados en un local.
-
----
-
-### 6. Módulo de Estadísticas y Dashboard (`/api/estadisticas`)
-
-#### `GET /api/estadisticas/dashboard?fechaInicio=2026-08-01&fechaFin=2026-08-21`
-* **Acceso:** Solo `Administrador`
-* **Descripción:** Retorna las métricas financieras globales consolidadas.
-* **Response (200 OK):**
-  ```json
-  {
-    "totalIngresos": 1540000,
-    "totalGastosCompras": 420000,
-    "totalGastosNomina": 300000,
-    "balanceNeto": 820000,
-    "metodoPagoPredominante": "Efectivo",
-    "ventasMetodoPago": {
-      "totalEfectivo": 1100000,
-      "totalTransferencia": 440000
-    },
-    "rankingLocales": [
-      {
-        "localId": 1,
-        "nombreLocal": "Sede Principal - Centro",
-        "totalVentas": 950000
-      },
-      {
-        "localId": 2,
-        "nombreLocal": "Sede Norte",
-        "totalVentas": 590000
-      }
-    ]
-  }
-  ```
+### 6. Estadísticas (`/api/estadisticas`)
+* `GET /api/estadisticas/dashboard?fechaInicio=...&fechaFin=...`: Métricas consolidadas del negocio *(Solo Administrador)*.
 
 ---
 
 ## 📖 Documentación Interactiva (Scalar OpenAPI)
 
-El backend incluye **Scalar API Reference** integrado para probar peticiones y payloads en tiempo real sin necesidad de herramientas externas:
-
-1. Iniciar la API (`dotnet run`).
-2. Abrir en el navegador:
-   👉 **[`http://localhost:5136/scalar/v1`](http://localhost:5136/scalar/v1)**
-3. Podrás autorizar peticiones con el botón `Authorize` pegando el token JWT recibido en el endpoint de login.
+Para consultar y probar los endpoints interactivamente desde el navegador:
+1. Inicia la API con `dotnet run`.
+2. Visita: **[`http://localhost:5136/scalar/v1`](http://localhost:5136/scalar/v1)**
 
 ---
 
-## 🧪 Ejecución de Pruebas Automatizadas
+## 🧪 Pruebas Automatizadas
 
-El proyecto incluye una suite exhaustiva de **22 pruebas unitarias y de integración** que validan la lógica de dominio, servicios, generador JWT, hasher de contraseñas y controladores:
+El backend incluye una suite de **22 pruebas unitarias y de integración** que validan entidades, lógica de dominio, servicios de aplicación, hashing, tokens JWT y controladores REST:
 
 ```bash
-# Ejecutar todas las pruebas con resumen de salida
+# Ejecutar todas las pruebas
 dotnet test
 
-# Ejecutar con detalles paso a paso por cada test
+# Ejecutar con detalles
 dotnet test --logger "console;verbosity=normal"
 ```
 
----
-
-## 📂 Estructura del Proyecto
-
-```text
-PatillaDash/
-├── README.md                                 # Documentación y contratos de API
-├── PATILLADASH_SPEC.md                       # Especificación técnica del MVP
-├── PatillaDash.slnx                          # Archivo de solución .NET
-│
-├── src/
-│   └── Backend/
-│       ├── PatillaDash.Domain/               # Capa 1: Entidades, Enums e Interfaces
-│       │   ├── Entities/                     # Modelos de Dominio
-│       │   ├── Enums/                        # RolUsuario, UnidadMedida
-│       │   └── Interfaces/                   # Contratos de Repositorios
-│       │
-│       ├── PatillaDash.Application/          # Capa 2: Casos de Uso y Reglas de Negocio
-│       │   ├── DTOs/                         # Auth, Ventas, Inventario, Compras, Pagos, Estadísticas
-│       │   ├── Interfaces/                   # IAuthService, IVentaService, etc.
-│       │   ├── Services/                     # Lógica de Servicios
-│       │   └── Validators/                   # FluentValidation por DTO
-│       │
-│       ├── PatillaDash.Infrastructure/       # Capa 3: Persistencia y Servicios Externos
-│       │   ├── Auth/                         # JwtTokenGenerator, PasswordHasher
-│       │   ├── Persistence/                  # PatillaDbContext, Configurations Fluent API
-│       │   └── Repositories/                 # Implementaciones de Repositorios EF Core
-│       │
-│       └── PatillaDash.Api/                  # Capa 4: Endpoints HTTP y Configuración
-│           ├── Controllers/                  # Auth, Ventas, Inventario, Compras, Pagos, Estadisticas
-│           ├── Filters/                      # ValidationFilter para FluentValidation
-│           ├── Middleware/                   # GlobalExceptionHandler (RFC 7807)
-│           ├── appsettings.json              # Configuración SQLite y claves JWT
-│           └── Program.cs                    # Configuración DI, CORS, JWT y Scalar
-│
-└── tests/
-    └── Backend/
-        └── PatillaDash.Tests/                # Suite de pruebas automatizadas (xUnit)
-            ├── Domain/                       # Tests de entidades e invariantes
-            ├── Application/                  # Tests de servicios de aplicación y validadores
-            ├── Infrastructure/               # Tests de hashing y generación de JWT
-            └── Api/                          # Tests de controladores REST
+Para verificar la compilación y empaquetado del frontend:
+```bash
+cd src/Frontend
+npm run build
 ```
 
 ---
 
-## 👥 Roles del Equipo y Colaboración
+## 📂 Estructura del Repositorio
 
-* **Backend (.NET 10 / Clean Architecture):** APIs RESTful, persistencia SQLite, autenticación JWT, validaciones y suite de pruebas.
-* **Frontend (Vite / Vanilla JS / Tailwind CSS):** SPA, interfaces responsivas para vendedores (móvil) y administradores (escritorio), gestión de estado cliente con Axios.
+```text
+PatillaDash/
+├── README.md                                 # Documentación central del proyecto
+├── PATILLADASH_SPEC.md                       # Especificación técnica del negocio
+├── PatillaDash.slnx                          # Solución .NET 10
+│
+├── src/
+│   ├── Backend/
+│   │   ├── PatillaDash.Domain/               # Capa 1: Entidades, Enums e Interfaces
+│   │   ├── PatillaDash.Application/          # Capa 2: Casos de uso, DTOs y FluentValidation
+│   │   ├── PatillaDash.Infrastructure/       # Capa 3: EF Core SQLite, DbInitializer, Auth
+│   │   └── PatillaDash.Api/                  # Capa 4: Controllers REST, Scalar, Middlewares
+│   │
+│   └── Frontend/                             # React 19 + Vite 8 + Tailwind CSS v4 SPA
+│       ├── index.html
+│       ├── vite.config.js
+│       ├── package.json
+│       └── src/
+│           ├── components/                   # AdminLayout, ProtectedRoute, etc.
+│           ├── context/                      # AuthContext
+│           ├── pages/                        # Login, VendedorDashboard, AdminDashboard,
+│           │                                 # AdminVentas, AdminInventario, AdminCompras, AdminPagos
+│           └── services/                     # api.js con clientes HTTP Axios
+│
+└── tests/
+    └── Backend/
+        └── PatillaDash.Tests/                # Tests xUnit (Domain, Application, Infra, Api)
+```

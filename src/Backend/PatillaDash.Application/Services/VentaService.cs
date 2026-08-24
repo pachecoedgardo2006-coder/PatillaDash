@@ -28,14 +28,11 @@ public class VentaService : IVentaService
 
         foreach (var d in dto.Detalles)
         {
-            // Usamos el método del agregador pasando precioUnitario
-            // (puedes pasar d.PrecioUnitario o calcularlo como d.Subtotal / d.CantidadVendida)
             registro.AgregarDetalle(d.ProductoId, d.CantidadVendida, d.Subtotal / d.CantidadVendida);
         }
 
         foreach (var c in dto.Consumos)
         {
-            // Usamos el método del agregador directamente
             registro.AgregarConsumo(c.SuministroId, c.CantidadGastada);
         }
 
@@ -51,7 +48,9 @@ public class VentaService : IVentaService
             }
         }
 
-        return new VentaResumenDto
+        // Consultamos la entidad completa para retornar nombres de producto y suministro
+        var ventaCreada = await _ventaRepository.GetByIdAsync(registro.Id);
+        return ventaCreada != null ? MapearADto(ventaCreada) : new VentaResumenDto
         {
             Id = registro.Id,
             LocalId = registro.LocalId,
@@ -69,16 +68,60 @@ public class VentaService : IVentaService
         var hasta = DateTime.UtcNow;
 
         var ventas = await _ventaRepository.GetByLocalAndDateRangeAsync(localId, desde, hasta);
-        
-        return ventas.Select(v => new VentaResumenDto
+        return ventas.Select(MapearADto);
+    }
+
+    public async Task<IEnumerable<VentaResumenDto>> ObtenerHistorialVentasAsync(int? localId = null)
+    {
+        var desde = DateTime.UtcNow.AddMonths(-1);
+        var hasta = DateTime.UtcNow;
+
+        IEnumerable<RegistroVentaDiaria> ventas;
+        if (localId.HasValue && localId.Value > 0)
+        {
+            ventas = await _ventaRepository.GetByLocalAndDateRangeAsync(localId.Value, desde, hasta);
+        }
+        else
+        {
+            ventas = await _ventaRepository.GetAllByDateRangeAsync(desde, hasta);
+        }
+
+        return ventas.Select(MapearADto);
+    }
+
+    public async Task<VentaResumenDto?> ObtenerDetalleVentaAsync(int id)
+    {
+        var venta = await _ventaRepository.GetByIdAsync(id);
+        return venta != null ? MapearADto(venta) : null;
+    }
+
+    private static VentaResumenDto MapearADto(RegistroVentaDiaria v)
+    {
+        return new VentaResumenDto
         {
             Id = v.Id,
             LocalId = v.LocalId,
+            NombreLocal = v.Local?.Nombre ?? $"Local #{v.LocalId}",
             VendedorId = v.VendedorId,
+            NombreVendedor = v.Vendedor?.Nombre ?? $"Vendedor #{v.VendedorId}",
             Fecha = v.Fecha,
             TotalEfectivo = v.TotalEfectivo,
             TotalTransferencia = v.TotalTransferencia,
-            Notas = v.Notas
-        });
+            Notas = v.Notas,
+            Detalles = v.Detalles.Select(d => new DetalleItemDto
+            {
+                ProductoId = d.ProductoId,
+                NombreProducto = d.Producto?.Nombre ?? $"Producto #{d.ProductoId}",
+                CantidadVendida = d.CantidadVendida,
+                Subtotal = d.Subtotal
+            }).ToList(),
+            Consumos = v.Consumos.Select(c => new ConsumoItemDto
+            {
+                SuministroId = c.SuministroId,
+                NombreSuministro = c.Suministro?.Nombre ?? $"Suministro #{c.SuministroId}",
+                UnidadMedida = c.Suministro?.UnidadMedida.ToString() ?? "Unidades",
+                CantidadGastada = c.CantidadGastada
+            }).ToList()
+        };
     }
 }
