@@ -8,16 +8,35 @@ namespace PatillaDash.Application.Services;
 public class PagoEmpleadoService : IPagoEmpleadoService
 {
     private readonly IPagoEmpleadoRepository _pagoRepository;
+    private readonly IUsuarioRepository _usuarioRepository;
 
-    public PagoEmpleadoService(IPagoEmpleadoRepository pagoRepository)
+    public PagoEmpleadoService(
+        IPagoEmpleadoRepository pagoRepository,
+        IUsuarioRepository usuarioRepository)
     {
         _pagoRepository = pagoRepository;
+        _usuarioRepository = usuarioRepository;
     }
 
     public async Task<PagoResumenDto> RegistrarPagoAsync(RegistrarPagoDto dto)
     {
+        var vendedor = await _usuarioRepository.GetByIdAsync(dto.VendedorId);
+        if (vendedor == null)
+            throw new InvalidOperationException("El trabajador seleccionado no existe.");
+
+        int localEfectivo = dto.LocalId;
+        if (vendedor.LocalId.HasValue && vendedor.LocalId.Value > 0)
+        {
+            if (dto.LocalId > 0 && dto.LocalId != vendedor.LocalId.Value)
+            {
+                throw new InvalidOperationException(
+                    $"Inconsistencia de sede: El colaborador '{vendedor.Nombre}' pertenece a la Sede #{vendedor.LocalId} ({vendedor.Local?.Nombre ?? "Sede Asignada"}). No se puede registrar un pago en la Sede #{dto.LocalId}.");
+            }
+            localEfectivo = vendedor.LocalId.Value;
+        }
+
         var pago = new PagoEmpleado(
-            dto.LocalId,
+            localEfectivo,
             dto.VendedorId,
             dto.Monto,
             dto.Observacion

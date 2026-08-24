@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import { pagosService, authService } from '../services/api';
-import { DollarSign, UserPlus, X, RefreshCw, CheckCircle2, Calendar, Users, AlertCircle } from 'lucide-react';
+import { DollarSign, UserPlus, X, RefreshCw, CheckCircle2, Calendar, Users, AlertCircle, Building2 } from 'lucide-react';
 
 export default function AdminPagos() {
   const [localId, setLocalId] = useState(1);
@@ -42,19 +42,27 @@ export default function AdminPagos() {
         authService.obtenerUsuarios(),
       ]);
 
+      let listaVend = [];
+      if (resUsuarios.status === 'fulfilled') {
+        listaVend = (resUsuarios.value.data || []).filter(u => u.rol === 'Vendedor' || u.rol === 2);
+        setVendedores(listaVend);
+      }
+
       if (resPagos.status === 'fulfilled') {
         setPagos(resPagos.value.data || []);
       }
-      if (resUsuarios.status === 'fulfilled') {
-        const soloVendedores = (resUsuarios.value.data || []).filter(u => u.rol === 'Vendedor' || u.rol === 2);
-        setVendedores(soloVendedores);
-        if (soloVendedores.length > 0 && !pagoForm.vendedorId) {
-          setPagoForm(prev => ({
+
+      // Si no hay vendedor seleccionado o el actual ya no está
+      if (listaVend.length > 0) {
+        setPagoForm(prev => {
+          const vendActual = listaVend.find(v => v.id === prev.vendedorId);
+          const primerVend = vendActual || listaVend.find(v => v.localId === (idLocal || localId)) || listaVend[0];
+          return {
             ...prev,
-            vendedorId: soloVendedores[0].id,
-            localId: soloVendedores[0].localId || 1
-          }));
-        }
+            vendedorId: primerVend.id,
+            localId: primerVend.localId || (idLocal || localId)
+          };
+        });
       }
     } catch (err) {
       console.error('Error al cargar datos:', err);
@@ -76,6 +84,15 @@ export default function AdminPagos() {
 
   const handleOpenPagoModal = () => {
     setModalError('');
+    const vendDefault = vendedores.find(v => v.localId === localId) || vendedores[0];
+    if (vendDefault) {
+      setPagoForm({
+        localId: vendDefault.localId || localId,
+        vendedorId: vendDefault.id,
+        monto: '',
+        observacion: 'Día laborado',
+      });
+    }
     setIsPagoModalOpen(true);
   };
 
@@ -114,7 +131,7 @@ export default function AdminPagos() {
       } else if (err.response?.data?.title) {
         setModalError(err.response.data.title);
       } else {
-        setModalError('No se pudo registrar al vendedor. Verifica si el correo ya existe o los datos ingresados.');
+        setModalError('No se pudo registrar al vendedor. Verifica si el correo ya existe.');
       }
     } finally {
       setSubmitting(false);
@@ -138,17 +155,20 @@ export default function AdminPagos() {
       return;
     }
 
+    const vend = vendedores.find(v => v.id === Number(pagoForm.vendedorId));
+    const localReal = vend?.localId || Number(pagoForm.localId);
+
     setSubmitting(true);
     setModalError('');
     try {
       await pagosService.registrarPago({
-        localId: Number(pagoForm.localId),
+        localId: localReal,
         vendedorId: Number(pagoForm.vendedorId),
         monto: Number(pagoForm.monto),
         observacion: pagoForm.observacion.trim(),
       });
 
-      setSuccessMsg('Pago registrado en nómina exitosamente.');
+      setSuccessMsg(`Pago a ${vend?.nombre || 'colaborador'} registrado en nómina exitosamente.`);
       setTimeout(() => setSuccessMsg(''), 4500);
       setIsPagoModalOpen(false);
       setPagoForm({
@@ -188,6 +208,8 @@ export default function AdminPagos() {
     return vend ? vend.nombre : `Vendedor #${vId}`;
   };
 
+  const vendedorActualSeleccionado = vendedores.find(v => v.id === Number(pagoForm.vendedorId));
+
   return (
     <AdminLayout
       title="Personal y Nómina"
@@ -219,7 +241,7 @@ export default function AdminPagos() {
         </div>
       )}
 
-      {/* Alerta de error general (solo si no hay modales abiertos) */}
+      {/* Alerta de error general */}
       {error && !isVendedorModalOpen && !isPagoModalOpen && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm flex items-center gap-2">
           <AlertCircle size={16} />
@@ -324,7 +346,7 @@ export default function AdminPagos() {
         </div>
       </div>
 
-      {/* --- MODAL NUEVO VENDEDOR (CON ERROR INTEGRADO DENTRO DEL MODAL) --- */}
+      {/* --- MODAL NUEVO VENDEDOR --- */}
       {isVendedorModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
@@ -342,7 +364,6 @@ export default function AdminPagos() {
 
             <form onSubmit={handleCrearVendedor}>
               <div className="p-6 space-y-4">
-                {/* ALERTA DE ERROR DENTRO DEL MODAL */}
                 {modalError && (
                   <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs flex items-start gap-2">
                     <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
@@ -422,7 +443,7 @@ export default function AdminPagos() {
         </div>
       )}
 
-      {/* --- MODAL REGISTRAR PAGO --- */}
+      {/* --- MODAL REGISTRAR PAGO (SEDE AUTOMÁTICA Y BLOQUEADA SEGÚN EL COLABORADOR) --- */}
       {isPagoModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
@@ -440,7 +461,6 @@ export default function AdminPagos() {
 
             <form onSubmit={handleRegistrarPago}>
               <div className="p-6 space-y-4">
-                {/* ALERTA DE ERROR DENTRO DEL MODAL */}
                 {modalError && (
                   <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs flex items-start gap-2">
                     <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
@@ -457,7 +477,7 @@ export default function AdminPagos() {
                       value={pagoForm.vendedorId}
                       onChange={handleSelectVendedorPago}
                       required
-                      className="w-full p-2.5 border border-patilla-border rounded-lg text-sm bg-patilla-bg font-semibold text-gray-800 outline-none focus:border-gray-500"
+                      className="w-full p-2.5 border border-patilla-border rounded-lg text-sm bg-patilla-bg font-bold text-gray-800 outline-none focus:border-gray-500"
                     >
                       {vendedores.map((vend) => (
                         <option key={vend.id} value={vend.id}>
@@ -472,31 +492,33 @@ export default function AdminPagos() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Sede de Pago</label>
-                    <select
-                      value={pagoForm.localId}
-                      onChange={(e) => setPagoForm({ ...pagoForm, localId: Number(e.target.value) })}
-                      className="w-full p-2.5 border border-patilla-border rounded-lg text-sm bg-patilla-bg outline-none font-medium"
-                    >
-                      <option value={1}>Sede Centro (#1)</option>
-                      <option value={2}>Sede Norte (#2)</option>
-                    </select>
+                {/* Sede Asignada (Informativa y fijada para evitar inconsistencias) */}
+                <div className="p-3 bg-patilla-bg border border-patilla-border rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Building2 size={16} className="text-gray-500" />
+                    <div>
+                      <p className="text-[11px] text-gray-500 font-semibold">Sede donde se imputa el pago:</p>
+                      <p className="text-xs font-bold text-gray-800">
+                        {vendedorActualSeleccionado?.nombreLocal || `Sede #${pagoForm.localId}`}
+                      </p>
+                    </div>
                   </div>
+                  <span className="text-[10px] bg-green-100 text-green-800 font-bold px-2 py-0.5 rounded border border-green-200">
+                    Sede Oficial
+                  </span>
+                </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Monto ($)</label>
-                    <input
-                      type="number"
-                      min="1"
-                      required
-                      placeholder="Ej. 60000"
-                      value={pagoForm.monto}
-                      onChange={(e) => setPagoForm({ ...pagoForm, monto: e.target.value })}
-                      className="w-full p-2.5 border border-patilla-border rounded-lg text-sm bg-patilla-bg outline-none focus:border-gray-500 font-bold"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Monto a Pagar ($ COP)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    placeholder="Ej. 60000"
+                    value={pagoForm.monto}
+                    onChange={(e) => setPagoForm({ ...pagoForm, monto: e.target.value })}
+                    className="w-full p-2.5 border border-patilla-border rounded-lg text-sm bg-patilla-bg outline-none focus:border-gray-500 font-bold text-green-800"
+                  />
                 </div>
 
                 <div>
