@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: patilladash-api
+    env: docker
+    plan: free
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false

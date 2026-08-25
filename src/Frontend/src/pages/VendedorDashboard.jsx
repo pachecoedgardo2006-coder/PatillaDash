@@ -21,7 +21,8 @@ import {
   CreditCard, 
   Check, 
   X,
-  Sparkles
+  Sparkles,
+  Store
 } from 'lucide-react';
 
 export default function VendedorDashboard() {
@@ -173,7 +174,7 @@ export default function VendedorDashboard() {
       }));
 
     if (consumosValidos.length === 0) {
-      mostrarToast('Declara al menos un insumo consumido (ej. patillas, hielo o vasos gastados).', 'error');
+      mostrarToast('Declara al menos un insumo consumido (ej. patillas, vasos o hielo gastados).', 'error');
       return;
     }
 
@@ -261,10 +262,10 @@ export default function VendedorDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-patilla-bg pb-12">
-      {/* --- TOAST FLOTANTE FIJADO (VISIBLE EN CUALQUIER PARTE SIN SCROLL) --- */}
+    <div className="min-h-screen bg-patilla-bg pb-20">
+      {/* Toast Flotante Fijado */}
       {toast.visible && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-11/12 max-w-md animate-bounce">
+        <div className="fixed top-4 inset-x-4 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 z-50 max-w-md animate-in fade-in slide-in-from-top-4 duration-200">
           <div className={`p-4 rounded-xl shadow-2xl border flex items-center justify-between gap-3 ${
             toast.tipo === 'success' 
               ? 'bg-green-800 text-white border-green-600' 
@@ -272,15 +273,15 @@ export default function VendedorDashboard() {
           }`}>
             <div className="flex items-center gap-2.5">
               {toast.tipo === 'success' ? (
-                <CheckCircle2 size={22} className="text-green-300 flex-shrink-0" />
+                <CheckCircle2 size={22} className="text-green-300 shrink-0" />
               ) : (
-                <AlertCircle size={22} className="text-red-300 flex-shrink-0" />
+                <AlertCircle size={22} className="text-red-300 shrink-0" />
               )}
               <span className="text-xs sm:text-sm font-semibold leading-snug">{toast.mensaje}</span>
             </div>
             <button 
               onClick={() => setToast(prev => ({ ...prev, visible: false }))}
-              className="text-white/80 hover:text-white p-1"
+              className="text-white/80 hover:text-white p-1 shrink-0"
             >
               <X size={18} />
             </button>
@@ -289,32 +290,34 @@ export default function VendedorDashboard() {
       )}
 
       {/* Header Mobile / Tablet */}
-      <header className="bg-white border-b border-patilla-border px-4 py-3.5 sticky top-0 z-30 shadow-xs">
+      <header className="bg-white border-b border-patilla-border px-4 py-3.5 sticky top-0 z-30 shadow-2xs">
         <div className="max-w-2xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <span className="text-2xl">🍉</span>
             <div>
-              <h1 className="font-bold text-gray-800 text-base leading-tight">PatillaDash</h1>
-              <p className="text-xs text-gray-500">
+              <h1 className="font-black text-gray-800 text-base leading-tight">PatillaDash</h1>
+              <p className="text-xs text-gray-500 font-medium">
                 {user?.nombre || 'Vendedor'} • Sede #{localId}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={cargarDatos}
               disabled={loading}
-              title="Recargar"
-              className="p-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Recargar datos"
+              aria-label="Recargar"
+              className="p-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors active:scale-95"
             >
-              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+              <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
             </button>
             <button
               onClick={logout}
               title="Cerrar sesión"
-              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              aria-label="Cerrar sesión"
+              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors active:scale-95"
             >
-              <LogOut size={16} />
+              <LogOut size={17} />
             </button>
           </div>
         </div>
@@ -327,7 +330,7 @@ export default function VendedorDashboard() {
             onClick={() => setActiveTab('cierre')}
             className={`py-2.5 text-xs sm:text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-all ${
               activeTab === 'cierre'
-                ? 'bg-white text-gray-800 shadow-xs'
+                ? 'bg-white text-gray-900 shadow-2xs'
                 : 'text-gray-500 hover:text-gray-800'
             }`}
           >
@@ -338,7 +341,7 @@ export default function VendedorDashboard() {
             onClick={() => setActiveTab('historial')}
             className={`py-2.5 text-xs sm:text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-all ${
               activeTab === 'historial'
-                ? 'bg-white text-gray-800 shadow-xs'
+                ? 'bg-white text-gray-900 shadow-2xs'
                 : 'text-gray-500 hover:text-gray-800'
             }`}
           >
@@ -355,19 +358,20 @@ export default function VendedorDashboard() {
         {activeTab === 'cierre' && (
           <div className="space-y-4">
             {/* Barra de Progreso de Pasos */}
-            <div className="bg-white border border-patilla-border rounded-xl p-3.5">
-              <div className="flex items-center justify-between relative">
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-gray-200 w-full z-0"></div>
+            <div className="bg-white border border-patilla-border rounded-2xl p-4 shadow-2xs">
+              <div className="flex items-center justify-between relative px-2">
+                <div className="absolute left-4 right-4 top-1/2 -translate-y-1/2 h-1 bg-gray-200 z-0"></div>
                 <div 
-                  className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-patilla-primary transition-all duration-300 z-0"
-                  style={{ width: pasoActual === 1 ? '0%' : pasoActual === 2 ? '50%' : '100%' }}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 h-1 bg-patilla-primary transition-all duration-300 z-0"
+                  style={{ width: pasoActual === 1 ? '0%' : pasoActual === 2 ? '50%' : 'calc(100% - 2rem)' }}
                 ></div>
 
                 {/* Paso 1 */}
                 <button
+                  type="button"
                   onClick={() => setPasoActual(1)}
-                  className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
-                    pasoActual >= 1 ? 'bg-patilla-primary text-gray-900 ring-4 ring-white shadow-xs' : 'bg-gray-200 text-gray-500'
+                  className={`relative z-10 w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
+                    pasoActual >= 1 ? 'bg-patilla-primary text-gray-900 ring-4 ring-white shadow-2xs font-extrabold' : 'bg-gray-200 text-gray-500'
                   }`}
                 >
                   1
@@ -375,9 +379,10 @@ export default function VendedorDashboard() {
 
                 {/* Paso 2 */}
                 <button
+                  type="button"
                   onClick={() => { if (validarPaso1()) setPasoActual(2); }}
-                  className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
-                    pasoActual >= 2 ? 'bg-patilla-primary text-gray-900 ring-4 ring-white shadow-xs' : 'bg-gray-200 text-gray-500'
+                  className={`relative z-10 w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
+                    pasoActual >= 2 ? 'bg-patilla-primary text-gray-900 ring-4 ring-white shadow-2xs font-extrabold' : 'bg-gray-200 text-gray-500'
                   }`}
                 >
                   2
@@ -385,26 +390,27 @@ export default function VendedorDashboard() {
 
                 {/* Paso 3 */}
                 <button
+                  type="button"
                   onClick={() => { if (validarPaso1() && validarPaso2()) setPasoActual(3); }}
-                  className={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
-                    pasoActual === 3 ? 'bg-patilla-primary text-gray-900 ring-4 ring-white shadow-xs' : 'bg-gray-200 text-gray-500'
+                  className={`relative z-10 w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
+                    pasoActual === 3 ? 'bg-patilla-primary text-gray-900 ring-4 ring-white shadow-2xs font-extrabold' : 'bg-gray-200 text-gray-500'
                   }`}
                 >
                   3
                 </button>
               </div>
 
-              <div className="flex justify-between text-[11px] text-gray-600 font-semibold mt-2 px-1">
-                <span>1. Dinero en Caja</span>
-                <span>2. Productos</span>
-                <span>3. Insumos & Envío</span>
+              <div className="flex justify-between text-[11px] text-gray-600 font-bold mt-2.5 px-0.5">
+                <span className={pasoActual === 1 ? 'text-gray-900' : 'text-gray-400'}>1. Dinero en Caja</span>
+                <span className={pasoActual === 2 ? 'text-gray-900' : 'text-gray-400'}>2. Productos</span>
+                <span className={pasoActual === 3 ? 'text-gray-900' : 'text-gray-400'}>3. Insumos</span>
               </div>
             </div>
 
             <form onSubmit={handleSubmit}>
               {/* --- PASO 1: TOTALES EN CAJA --- */}
               {pasoActual === 1 && (
-                <div className="bg-white border border-patilla-border rounded-xl p-5 shadow-xs space-y-4">
+                <div className="bg-white border border-patilla-border rounded-2xl p-5 shadow-2xs space-y-4">
                   <div className="border-b border-patilla-border pb-3">
                     <h2 className="font-bold text-gray-800 text-base flex items-center gap-2">
                       <DollarSign size={18} className="text-green-700" /> Paso 1: Dinero en Caja del Turno
@@ -416,7 +422,7 @@ export default function VendedorDashboard() {
 
                   <div className="space-y-4 pt-1">
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                      <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
                         <Banknote size={16} className="text-green-600" /> Total Efectivo en Caja ($)
                       </label>
                       <input
@@ -426,12 +432,12 @@ export default function VendedorDashboard() {
                         placeholder="Ej. 180000"
                         value={totalEfectivo}
                         onChange={(e) => setTotalEfectivo(e.target.value)}
-                        className="w-full p-3 border border-patilla-border rounded-lg text-lg font-bold bg-patilla-bg outline-none focus:border-gray-500"
+                        className="w-full p-3.5 border border-patilla-border rounded-xl text-lg font-extrabold bg-patilla-bg outline-none focus:border-gray-500 focus:bg-white transition-colors"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                      <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
                         <CreditCard size={16} className="text-blue-600" /> Total Transferencias ($ Nequi / Daviplata)
                       </label>
                       <input
@@ -441,24 +447,29 @@ export default function VendedorDashboard() {
                         placeholder="Ej. 45000"
                         value={totalTransferencia}
                         onChange={(e) => setTotalTransferencia(e.target.value)}
-                        className="w-full p-3 border border-patilla-border rounded-lg text-lg font-bold bg-patilla-bg outline-none focus:border-gray-500"
+                        className="w-full p-3.5 border border-patilla-border rounded-xl text-lg font-extrabold bg-patilla-bg outline-none focus:border-gray-500 focus:bg-white transition-colors"
                       />
                     </div>
 
                     {/* Resumen Total en vivo */}
-                    <div className="p-3.5 bg-patilla-bg border border-patilla-border rounded-lg flex items-center justify-between">
-                      <span className="text-xs font-bold text-gray-600">Total Recaudado en Turno:</span>
-                      <span className="text-lg font-extrabold text-green-700">{formatearDinero(totalCaja)}</span>
+                    <div className="p-4 bg-gray-50 border border-patilla-border rounded-xl flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-bold text-gray-500 block">Total Recaudado en Turno:</span>
+                        <span className="text-xl font-black text-green-700">{formatearDinero(totalCaja)}</span>
+                      </div>
+                      <div className="p-2.5 bg-green-100 text-green-800 rounded-xl">
+                        <Banknote size={24} />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="pt-3 flex justify-end">
+                  <div className="pt-3">
                     <button
                       type="button"
                       onClick={avanzarPaso}
-                      className="w-full sm:w-auto px-6 py-3 bg-patilla-primary hover:bg-patilla-primary-hover text-gray-900 font-bold rounded-lg flex items-center justify-center gap-2 transition-colors text-sm shadow-xs"
+                      className="w-full py-3.5 bg-patilla-primary hover:bg-patilla-primary-hover text-gray-900 font-bold rounded-xl flex items-center justify-center gap-2 transition-transform active:scale-98 text-sm shadow-2xs cursor-pointer"
                     >
-                      Siguiente: Productos <ChevronRight size={16} />
+                      Siguiente: Productos <ChevronRight size={17} />
                     </button>
                   </div>
                 </div>
@@ -466,7 +477,7 @@ export default function VendedorDashboard() {
 
               {/* --- PASO 2: PRODUCTOS VENDIDOS --- */}
               {pasoActual === 2 && (
-                <div className="bg-white border border-patilla-border rounded-xl p-5 shadow-xs space-y-4">
+                <div className="bg-white border border-patilla-border rounded-2xl p-5 shadow-2xs space-y-4">
                   <div className="border-b border-patilla-border pb-3">
                     <h2 className="font-bold text-gray-800 text-base flex items-center gap-2">
                       <ShoppingBag size={18} className="text-patilla-primary" /> Paso 2: Productos Vendidos
@@ -480,7 +491,7 @@ export default function VendedorDashboard() {
                     {productos.map((prod) => (
                       <div
                         key={prod.id}
-                        className="flex items-center justify-between p-3 bg-patilla-bg border border-patilla-border rounded-lg"
+                        className="flex items-center justify-between p-3.5 bg-patilla-bg border border-patilla-border rounded-xl"
                       >
                         <div className="pr-2">
                           <p className="font-bold text-gray-800 text-sm">{prod.nombre}</p>
@@ -490,27 +501,27 @@ export default function VendedorDashboard() {
                           <button
                             type="button"
                             onClick={() => updateProductoCantidad(prod.id, -1)}
-                            className="w-8 h-8 rounded-lg bg-white border border-patilla-border flex items-center justify-center text-gray-700 font-bold hover:bg-gray-100 active:scale-95 transition-transform"
+                            className="w-10 h-10 rounded-xl bg-white border border-patilla-border flex items-center justify-center text-gray-700 font-bold hover:bg-gray-100 active:scale-90 transition-transform shadow-2xs"
                           >
-                            <Minus size={14} />
+                            <Minus size={16} />
                           </button>
-                          <span className="w-8 text-center font-extrabold text-sm text-gray-800">
+                          <span className="w-9 text-center font-black text-base text-gray-800">
                             {prod.cantidad}
                           </span>
                           <button
                             type="button"
                             onClick={() => updateProductoCantidad(prod.id, 1)}
-                            className="w-8 h-8 rounded-lg bg-patilla-primary flex items-center justify-center text-gray-900 font-bold hover:bg-patilla-primary-hover active:scale-95 transition-transform shadow-xs"
+                            className="w-10 h-10 rounded-xl bg-patilla-primary flex items-center justify-center text-gray-900 font-bold hover:bg-patilla-primary-hover active:scale-90 transition-transform shadow-2xs"
                           >
-                            <Plus size={14} />
+                            <Plus size={16} />
                           </button>
                         </div>
                       </div>
                     ))}
 
-                    <div className="p-3.5 bg-gray-50 border border-patilla-border rounded-lg flex items-center justify-between">
+                    <div className="p-3.5 bg-gray-50 border border-patilla-border rounded-xl flex items-center justify-between">
                       <span className="text-xs font-bold text-gray-600">Total Estimado en Productos:</span>
-                      <span className="text-base font-extrabold text-gray-800">{formatearDinero(totalCalculadoProductos)}</span>
+                      <span className="text-base font-black text-gray-800">{formatearDinero(totalCalculadoProductos)}</span>
                     </div>
                   </div>
 
@@ -518,16 +529,16 @@ export default function VendedorDashboard() {
                     <button
                       type="button"
                       onClick={retrocederPaso}
-                      className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-lg flex items-center justify-center gap-1.5 transition-colors text-sm"
+                      className="px-4 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors text-sm"
                     >
                       <ChevronLeft size={16} /> Atrás
                     </button>
                     <button
                       type="button"
                       onClick={avanzarPaso}
-                      className="flex-1 py-3 bg-patilla-primary hover:bg-patilla-primary-hover text-gray-900 font-bold rounded-lg flex items-center justify-center gap-2 transition-colors text-sm shadow-xs"
+                      className="flex-1 py-3.5 bg-patilla-primary hover:bg-patilla-primary-hover text-gray-900 font-bold rounded-xl flex items-center justify-center gap-2 transition-transform active:scale-98 text-sm shadow-2xs"
                     >
-                      Siguiente: Insumos <ChevronRight size={16} />
+                      Siguiente: Insumos <ChevronRight size={17} />
                     </button>
                   </div>
                 </div>
@@ -535,7 +546,7 @@ export default function VendedorDashboard() {
 
               {/* --- PASO 3: INSUMOS CONSUMIDOS DINÁMICOS & FINALIZAR --- */}
               {pasoActual === 3 && (
-                <div className="bg-white border border-patilla-border rounded-xl p-5 shadow-xs space-y-4">
+                <div className="bg-white border border-patilla-border rounded-2xl p-5 shadow-2xs space-y-4">
                   <div className="border-b border-patilla-border pb-3">
                     <h2 className="font-bold text-gray-800 text-base flex items-center gap-2">
                       <Package size={18} className="text-patilla-secondary" /> Paso 3: Insumos Gastados & Finalizar
@@ -558,7 +569,7 @@ export default function VendedorDashboard() {
                           className="p-3.5 bg-patilla-bg border border-patilla-border rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                         >
                           <div className="flex items-center gap-2.5">
-                            <span className="text-xl">{getInsumoIcon(item.nombreSuministro)}</span>
+                            <span className="text-2xl">{getInsumoIcon(item.nombreSuministro)}</span>
                             <div>
                               <p className="font-bold text-gray-800 text-sm">{item.nombreSuministro}</p>
                               <span className="text-[11px] text-gray-500 font-medium">
@@ -572,30 +583,31 @@ export default function VendedorDashboard() {
                             <button
                               type="button"
                               onClick={() => ajustarConsumoDelta(item.suministroId, -1)}
-                              className="w-8 h-8 rounded-lg bg-white border border-patilla-border flex items-center justify-center text-gray-700 font-bold hover:bg-gray-100 active:scale-95 transition-transform"
+                              className="w-10 h-10 rounded-xl bg-white border border-patilla-border flex items-center justify-center text-gray-700 font-bold hover:bg-gray-100 active:scale-90 transition-transform shadow-2xs"
                             >
-                              <Minus size={14} />
+                              <Minus size={16} />
                             </button>
-                            <div className="relative w-24">
+                            <div className="relative w-28">
                               <input
                                 type="number"
+                                inputMode="decimal"
                                 step={item.unidadMedida === 'Kg' ? '0.1' : '1'}
                                 min="0"
                                 placeholder="0"
                                 value={consumos[item.suministroId] || ''}
                                 onChange={(e) => handleConsumoChange(item.suministroId, e.target.value)}
-                                className="w-full p-2 text-center border border-patilla-border rounded-lg text-sm bg-white font-extrabold text-gray-800 outline-none focus:border-gray-500"
+                                className="w-full p-2.5 pr-8 text-center border border-patilla-border rounded-xl text-sm bg-white font-black text-gray-800 outline-none focus:border-gray-500 shadow-2xs"
                               />
-                              <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 pointer-events-none">
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400 pointer-events-none">
                                 {item.unidadMedida === 'Unidades' ? 'uds' : item.unidadMedida}
                               </span>
                             </div>
                             <button
                               type="button"
                               onClick={() => ajustarConsumoDelta(item.suministroId, 1)}
-                              className="w-8 h-8 rounded-lg bg-patilla-secondary/60 hover:bg-patilla-secondary flex items-center justify-center text-green-900 font-bold active:scale-95 transition-transform shadow-xs"
+                              className="w-10 h-10 rounded-xl bg-patilla-secondary/60 hover:bg-patilla-secondary flex items-center justify-center text-green-900 font-bold active:scale-90 transition-transform shadow-2xs"
                             >
-                              <Plus size={14} />
+                              <Plus size={16} />
                             </button>
                           </div>
                         </div>
@@ -611,7 +623,7 @@ export default function VendedorDashboard() {
                         placeholder="Ej. Se derritió una bolsa de hielo / Día con alta afluencia"
                         value={notas}
                         onChange={(e) => setNotas(e.target.value)}
-                        className="w-full p-2.5 border border-patilla-border rounded-lg text-sm bg-patilla-bg outline-none focus:border-gray-500"
+                        className="w-full p-3 border border-patilla-border rounded-xl text-sm bg-patilla-bg outline-none focus:border-gray-500 focus:bg-white"
                       ></textarea>
                     </div>
                   </div>
@@ -620,18 +632,18 @@ export default function VendedorDashboard() {
                     <button
                       type="button"
                       onClick={retrocederPaso}
-                      className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-lg flex items-center justify-center gap-1.5 transition-colors text-sm"
+                      className="px-4 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors text-sm"
                     >
                       <ChevronLeft size={16} /> Atrás
                     </button>
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg flex items-center justify-center gap-2 transition-colors text-sm shadow-md disabled:opacity-50 active:scale-98"
+                      className="flex-1 py-3.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all text-sm shadow-md disabled:opacity-50 active:scale-98 cursor-pointer"
                     >
                       {submitting ? (
                         <>
-                          <RefreshCw size={16} className="animate-spin" /> Guardando...
+                          <RefreshCw size={17} className="animate-spin" /> Guardando...
                         </>
                       ) : (
                         <>
@@ -650,7 +662,7 @@ export default function VendedorDashboard() {
         {/* PESTAÑA 2: MI HISTORIAL DE TURNOS (PAGINADO A 10 ITEMS)      */}
         {/* ============================================================ */}
         {activeTab === 'historial' && (
-          <div className="bg-white border border-patilla-border rounded-xl overflow-hidden shadow-xs">
+          <div className="bg-white border border-patilla-border rounded-2xl overflow-hidden shadow-2xs">
             <div className="p-4 border-b border-patilla-border flex items-center justify-between bg-gray-50">
               <div>
                 <h3 className="font-bold text-gray-800 text-sm sm:text-base flex items-center gap-2">
@@ -679,9 +691,9 @@ export default function VendedorDashboard() {
                   {ventasPaginadas.map((v) => (
                     <div
                       key={v.id}
-                      className="p-3.5 border border-patilla-border rounded-lg bg-patilla-bg/60 hover:bg-patilla-bg transition-colors"
+                      className="p-4 border border-patilla-border rounded-xl bg-patilla-bg/60 hover:bg-patilla-bg transition-colors"
                     >
-                      <div className="flex justify-between items-start mb-2">
+                      <div className="flex justify-between items-start mb-2.5">
                         <div className="flex items-center gap-2">
                           <Calendar size={15} className="text-gray-400" />
                           <span className="text-xs font-bold text-gray-800">
@@ -695,18 +707,18 @@ export default function VendedorDashboard() {
                             })}
                           </span>
                         </div>
-                        <span className="text-sm font-extrabold text-green-700">
+                        <span className="text-sm font-black text-green-700">
                           {formatearDinero(v.totalGeneral)}
                         </span>
                       </div>
 
-                      <div className="flex justify-between text-xs text-gray-600 pt-2 border-t border-patilla-border">
+                      <div className="flex justify-between text-xs text-gray-600 pt-2.5 border-t border-patilla-border">
                         <span>Efectivo: <strong>{formatearDinero(v.totalEfectivo)}</strong></span>
                         <span>Transferencias: <strong>{formatearDinero(v.totalTransferencia)}</strong></span>
                       </div>
 
                       {v.notas && (
-                        <p className="text-xs text-gray-500 mt-2 bg-white p-2 rounded border border-patilla-border italic">
+                        <p className="text-xs text-gray-500 mt-2 bg-white p-2.5 rounded-lg border border-patilla-border italic">
                           "{v.notas}"
                         </p>
                       )}
@@ -719,7 +731,7 @@ export default function VendedorDashboard() {
                       <button
                         onClick={() => setPaginaActual(prev => Math.max(1, prev - 1))}
                         disabled={paginaActual === 1}
-                        className="px-3 py-1.5 text-xs font-bold bg-white border border-patilla-border rounded-lg text-gray-700 disabled:opacity-40 hover:bg-gray-50 flex items-center gap-1"
+                        className="px-3 py-2 text-xs font-bold bg-white border border-patilla-border rounded-xl text-gray-700 disabled:opacity-40 hover:bg-gray-50 flex items-center gap-1 active:scale-95"
                       >
                         <ChevronLeft size={14} /> Anterior
                       </button>
@@ -731,7 +743,7 @@ export default function VendedorDashboard() {
                       <button
                         onClick={() => setPaginaActual(prev => Math.min(totalPaginas, prev + 1))}
                         disabled={paginaActual === totalPaginas}
-                        className="px-3 py-1.5 text-xs font-bold bg-white border border-patilla-border rounded-lg text-gray-700 disabled:opacity-40 hover:bg-gray-50 flex items-center gap-1"
+                        className="px-3 py-2 text-xs font-bold bg-white border border-patilla-border rounded-xl text-gray-700 disabled:opacity-40 hover:bg-gray-50 flex items-center gap-1 active:scale-95"
                       >
                         Siguiente <ChevronRight size={14} />
                       </button>

@@ -1,0 +1,13 @@
+**/.git
+**/.github
+**/.vs
+**/.vscode
+**/.idea
+**/bin
+**/obj
+**/node_modules
+**/dist
+src/Frontend
+*.db
+*.db-shm
+*.db-wal

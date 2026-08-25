@@ -5,6 +5,12 @@ namespace PatillaDash.Infrastructure.Persistence;
 
 public class PatillaDbContext : DbContext
 {
+    static PatillaDbContext()
+    {
+        // Compatibilidad global con Npgsql para marcas de tiempo DateTime UTC / Unspecified
+        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+    }
+
     public PatillaDbContext(DbContextOptions<PatillaDbContext> options) : base(options)
     {
     }

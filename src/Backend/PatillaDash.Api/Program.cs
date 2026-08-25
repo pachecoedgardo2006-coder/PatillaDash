@@ -12,13 +12,21 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Soporte dinámico de Puerto para Cloud / Render (variable de entorno PORT)
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
+
 // Inyección de dependencias de Capas
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // Autenticación JWT Bearer
 var jwtSecretKey = builder.Configuration["Jwt:SecretKey"] 
-    ?? throw new InvalidOperationException("La clave secreta de JWT no está configurada.");
+    ?? Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
+    ?? "PatillaDashSecretKey_ParaAutenticacionSeguraJWT_2026!";
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "PatillaDashApi";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "PatillaDashClient";
 
@@ -46,15 +54,29 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// Política CORS flexible para desarrollo en red local (Wi-Fi / Celulares)
+// Política CORS flexible para desarrollo local y producción en Netlify
+var allowedOriginsEnv = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS");
+var customOrigins = allowedOriginsEnv?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.SetIsOriginAllowed(_ => true)
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+        if (customOrigins.Length > 0)
+        {
+            policy.WithOrigins(customOrigins)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        }
+        else
+        {
+            // Permite conexiones locales y subdominios de Netlify en desarrollo/staging
+            policy.SetIsOriginAllowed(_ => true)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        }
     });
 });
 
@@ -77,7 +99,7 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// Inicializar y sembrar Base de Datos automáticamente
+// Inicializar y sembrar Base de Datos automáticamente (Postgres o SQLite)
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -97,8 +119,13 @@ using (var scope = app.Services.CreateScope())
 // Pipeline de manejo de errores
 app.UseExceptionHandler();
 
-// Documentación de API interactiva en desarrollo con Scalar
-if (app.Environment.IsDevelopment())
+// Endpoint de Health Check para Render / Uptime monitors
+app.MapGet("/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow, app = "PatillaDash API" }));
+app.MapGet("/api/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow, app = "PatillaDash API" }));
+
+// Documentación de API interactiva (Scalar)
+var enableDocs = app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("EnableOpenApi");
+if (enableDocs)
 {
     app.MapOpenApi();
     app.MapScalarApiReference(options =>

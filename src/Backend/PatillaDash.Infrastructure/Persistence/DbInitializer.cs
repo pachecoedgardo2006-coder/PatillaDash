@@ -9,8 +9,15 @@ public static class DbInitializer
 {
     public static async Task SeedAsync(PatillaDbContext context, IPasswordHasher passwordHasher)
     {
-        // Aplica migraciones automáticamente si no existen
-        await context.Database.MigrateAsync();
+        // En PostgreSQL / Supabase usamos EnsureCreatedAsync() o MigrateAsync() de forma segura
+        if (context.Database.IsNpgsql())
+        {
+            await context.Database.EnsureCreatedAsync();
+        }
+        else
+        {
+            await context.Database.MigrateAsync();
+        }
 
         // 1. Sembrar Locales
         if (!await context.Locales.AnyAsync())

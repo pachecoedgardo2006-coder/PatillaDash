@@ -1,193 +1,103 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import { pagosService, authService } from '../services/api';
-import { DollarSign, UserPlus, X, RefreshCw, CheckCircle2, Calendar, Users, AlertCircle, Building2 } from 'lucide-react';
+import { 
+  Users, 
+  Plus, 
+  RefreshCw, 
+  Calendar, 
+  DollarSign, 
+  UserCheck, 
+  X, 
+  Check, 
+  AlertCircle,
+  Building2
+} from 'lucide-react';
 
 export default function AdminPagos() {
-  const [localId, setLocalId] = useState(1);
   const [pagos, setPagos] = useState([]);
-  const [vendedores, setVendedores] = useState([]);
+  const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filtroLocal, setFiltroLocal] = useState('');
   const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
 
-  // Modales
-  const [isVendedorModalOpen, setIsVendedorModalOpen] = useState(false);
-  const [isPagoModalOpen, setIsPagoModalOpen] = useState(false);
+  // Modal registrar pago
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [modalError, setModalError] = useState('');
+  const [formError, setFormError] = useState('');
 
-  // Form Nuevo Vendedor
-  const [vendedorForm, setVendedorForm] = useState({
-    nombre: '',
-    email: '',
-    password: '',
-    localId: 1,
-  });
-
-  // Form Registrar Pago
-  const [pagoForm, setPagoForm] = useState({
-    localId: 1,
+  const [formData, setFormData] = useState({
     vendedorId: '',
     monto: '',
-    observacion: 'Día laborado',
+    observacion: '',
   });
 
-  const cargarDatos = async (idLocal) => {
+  const cargarDatos = async (localId) => {
     setLoading(true);
     setError('');
     try {
       const [resPagos, resUsuarios] = await Promise.allSettled([
-        pagosService.obtenerPorLocal(idLocal || localId),
+        pagosService.obtenerPorLocal(localId ? Number(localId) : 1),
         authService.obtenerUsuarios(),
       ]);
-
-      let listaVend = [];
-      if (resUsuarios.status === 'fulfilled') {
-        listaVend = (resUsuarios.value.data || []).filter(u => u.rol === 'Vendedor' || u.rol === 2);
-        setVendedores(listaVend);
-      }
 
       if (resPagos.status === 'fulfilled') {
         setPagos(resPagos.value.data || []);
       }
-
-      // Si no hay vendedor seleccionado o el actual ya no está
-      if (listaVend.length > 0) {
-        setPagoForm(prev => {
-          const vendActual = listaVend.find(v => v.id === prev.vendedorId);
-          const primerVend = vendActual || listaVend.find(v => v.localId === (idLocal || localId)) || listaVend[0];
-          return {
-            ...prev,
-            vendedorId: primerVend.id,
-            localId: primerVend.localId || (idLocal || localId)
-          };
-        });
+      if (resUsuarios.status === 'fulfilled') {
+        const u = resUsuarios.value.data || [];
+        setUsuarios(u);
+        if (u.length > 0 && !formData.vendedorId) {
+          setFormData(prev => ({ ...prev, vendedorId: u[0].id }));
+        }
       }
     } catch (err) {
-      console.error('Error al cargar datos:', err);
-      setError('No se pudo cargar la información de pagos y personal.');
+      console.error('Error al cargar pagos:', err);
+      setError('No se pudo cargar la información de nómina.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    cargarDatos(localId);
-  }, [localId]);
+    cargarDatos(filtroLocal);
+  }, [filtroLocal]);
 
-  const handleOpenVendedorModal = () => {
-    setModalError('');
-    setVendedorForm({ nombre: '', email: '', password: '', localId: localId });
-    setIsVendedorModalOpen(true);
-  };
-
-  const handleOpenPagoModal = () => {
-    setModalError('');
-    const vendDefault = vendedores.find(v => v.localId === localId) || vendedores[0];
-    if (vendDefault) {
-      setPagoForm({
-        localId: vendDefault.localId || localId,
-        vendedorId: vendDefault.id,
-        monto: '',
-        observacion: 'Día laborado',
-      });
-    }
-    setIsPagoModalOpen(true);
-  };
-
-  const handleCrearVendedor = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
-    setModalError('');
+    setFormError('');
 
-    if (vendedorForm.password.length < 6) {
-      setModalError('La contraseña debe tener al menos 6 caracteres.');
-      setSubmitting(false);
+    if (!formData.monto || Number(formData.monto) <= 0) {
+      setFormError('Ingresa un monto válido mayor a 0.');
+      return;
+    }
+    if (!formData.vendedorId) {
+      setFormError('Selecciona un trabajador.');
       return;
     }
 
-    try {
-      await authService.register({
-        nombre: vendedorForm.nombre.trim(),
-        email: vendedorForm.email.trim(),
-        password: vendedorForm.password,
-        rol: 2, // RolUsuario.Vendedor = 2
-        localId: Number(vendedorForm.localId),
-      });
-
-      setSuccessMsg(`¡Colaborador ${vendedorForm.nombre} registrado exitosamente!`);
-      setTimeout(() => setSuccessMsg(''), 4500);
-      setIsVendedorModalOpen(false);
-      setVendedorForm({ nombre: '', email: '', password: '', localId: 1 });
-      await cargarDatos(localId);
-    } catch (err) {
-      console.error('Error al registrar vendedor:', err);
-      if (err.response?.data?.detail) {
-        setModalError(err.response.data.detail);
-      } else if (err.response?.data?.errors) {
-        const firstKey = Object.keys(err.response.data.errors)[0];
-        setModalError(err.response.data.errors[firstKey][0]);
-      } else if (err.response?.data?.title) {
-        setModalError(err.response.data.title);
-      } else {
-        setModalError('No se pudo registrar al vendedor. Verifica si el correo ya existe.');
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleSelectVendedorPago = (e) => {
-    const vId = Number(e.target.value);
-    const vend = vendedores.find(v => v.id === vId);
-    setPagoForm({
-      ...pagoForm,
-      vendedorId: vId,
-      localId: vend?.localId || localId
-    });
-  };
-
-  const handleRegistrarPago = async (e) => {
-    e.preventDefault();
-    if (!pagoForm.vendedorId) {
-      setModalError('Debes seleccionar un colaborador para registrar el pago.');
-      return;
-    }
-
-    const vend = vendedores.find(v => v.id === Number(pagoForm.vendedorId));
-    const localReal = vend?.localId || Number(pagoForm.localId);
-
     setSubmitting(true);
-    setModalError('');
     try {
+      const usuarioSel = usuarios.find(u => u.id === Number(formData.vendedorId));
+      const localEfectivo = usuarioSel?.localId || (filtroLocal ? Number(filtroLocal) : 1);
+
       await pagosService.registrarPago({
-        localId: localReal,
-        vendedorId: Number(pagoForm.vendedorId),
-        monto: Number(pagoForm.monto),
-        observacion: pagoForm.observacion.trim(),
+        localId: localEfectivo,
+        vendedorId: Number(formData.vendedorId),
+        monto: Number(formData.monto),
+        observacion: formData.observacion.trim() || undefined,
       });
 
-      setSuccessMsg(`Pago a ${vend?.nombre || 'colaborador'} registrado en nómina exitosamente.`);
-      setTimeout(() => setSuccessMsg(''), 4500);
-      setIsPagoModalOpen(false);
-      setPagoForm({
-        localId: localId,
-        vendedorId: vendedores[0]?.id || '',
+      setIsModalOpen(false);
+      setFormData(prev => ({
+        ...prev,
         monto: '',
-        observacion: 'Día laborado',
-      });
-      await cargarDatos(localId);
+        observacion: '',
+      }));
+      cargarDatos(filtroLocal);
     } catch (err) {
       console.error('Error al registrar pago:', err);
-      if (err.response?.data?.detail) {
-        setModalError(err.response.data.detail);
-      } else if (err.response?.data?.errors) {
-        const firstKey = Object.keys(err.response.data.errors)[0];
-        setModalError(err.response.data.errors[firstKey][0]);
-      } else {
-        setModalError('Error al registrar el pago en nómina.');
-      }
+      setFormError(err.response?.data?.detail || 'Error al registrar el pago en el servidor.');
     } finally {
       setSubmitting(false);
     }
@@ -201,106 +111,57 @@ export default function AdminPagos() {
     }).format(monto || 0);
   };
 
-  const totalPagos = pagos.reduce((acc, curr) => acc + (curr.monto || 0), 0);
-
-  const getNombreVendedor = (vId) => {
-    const vend = vendedores.find(v => v.id === vId);
-    return vend ? vend.nombre : `Vendedor #${vId}`;
-  };
-
-  const vendedorActualSeleccionado = vendedores.find(v => v.id === Number(pagoForm.vendedorId));
+  const totalPagadoNomina = pagos.reduce((acc, curr) => acc + (curr.monto || 0), 0);
 
   return (
     <AdminLayout
-      title="Personal y Nómina"
-      subtitle="Control de colaboradores, anticipos y registro de pagos diarios"
+      title="Pagos y Nómina"
+      subtitle="Registro de pagos a colaboradores, turnos y liquidaciones de sueldos"
       actionButton={
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={handleOpenVendedorModal}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white border border-patilla-border hover:bg-gray-50 text-gray-700 font-semibold rounded transition-colors text-xs sm:text-sm"
-          >
-            <UserPlus size={16} />
-            Nuevo Vendedor
-          </button>
-          <button
-            onClick={handleOpenPagoModal}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-patilla-secondary hover:bg-green-300 text-green-900 font-semibold rounded transition-colors text-xs sm:text-sm"
-          >
-            <DollarSign size={16} />
-            Registrar Pago
-          </button>
-        </div>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-patilla-primary hover:bg-patilla-primary-hover text-gray-900 text-xs sm:text-sm font-black rounded-xl transition-transform active:scale-95 shadow-2xs cursor-pointer"
+        >
+          <Plus size={16} />
+          Registrar Pago / Turno
+        </button>
       }
     >
-      {/* Alerta de éxito general */}
-      {successMsg && (
-        <div className="mb-4 p-3.5 bg-green-50 border border-green-300 text-green-800 rounded-lg text-sm flex items-center gap-2 shadow-xs">
-          <CheckCircle2 size={18} className="text-green-600 flex-shrink-0" />
-          <span className="font-semibold">{successMsg}</span>
-        </div>
-      )}
-
-      {/* Alerta de error general */}
-      {error && !isVendedorModalOpen && !isPagoModalOpen && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm flex items-center gap-2">
-          <AlertCircle size={16} />
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs sm:text-sm">
           {error}
         </div>
       )}
 
-      {/* Selector de Local y Resumen */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white border border-patilla-border rounded-lg p-4 flex items-center justify-between sm:col-span-2">
-          <div className="flex items-center gap-3">
-            <label className="text-xs font-semibold text-gray-600">Local / Sede:</label>
-            <select
-              value={localId}
-              onChange={(e) => setLocalId(Number(e.target.value))}
-              className="p-2 border border-patilla-border rounded text-sm bg-patilla-bg outline-none font-medium text-gray-700"
-            >
-              <option value={1}>Sede Centro (Local #1)</option>
-              <option value={2}>Sede Norte (Local #2)</option>
-            </select>
-          </div>
-          <button
-            onClick={() => cargarDatos(localId)}
-            disabled={loading}
-            className="p-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded"
-          >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-          </button>
+      {/* Tarjeta de Resumen */}
+      <div className="bg-white border border-patilla-border rounded-2xl p-4 sm:p-5 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
+        <div>
+          <span className="text-[11px] text-gray-500 font-bold uppercase tracking-wider block">Gasto Total en Nómina</span>
+          <span className="text-2xl sm:text-3xl font-black text-gray-800">{formatearDinero(totalPagadoNomina)}</span>
         </div>
-
-        <div className="bg-white border border-patilla-border rounded-lg p-4 flex items-center justify-between">
-          <div>
-            <p className="text-xs text-gray-500 font-medium">Total Pagado en Sede</p>
-            <p className="text-xl font-bold text-gray-800">{formatearDinero(totalPagos)}</p>
-          </div>
-          <div className="p-2.5 bg-green-100 text-green-700 rounded">
-            <DollarSign size={20} />
-          </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <label className="text-xs font-bold text-gray-700 shrink-0">Sede:</label>
+          <select
+            value={filtroLocal}
+            onChange={(e) => setFiltroLocal(e.target.value)}
+            className="flex-1 sm:flex-none p-2 border border-patilla-border rounded-xl text-xs bg-patilla-bg outline-none font-bold text-gray-800"
+          >
+            <option value="1">Sede Centro (#1)</option>
+            <option value="2">Sede Norte (#2)</option>
+          </select>
         </div>
       </div>
 
-      {/* Tabla de Pagos Realizados */}
-      <div className="bg-white border border-patilla-border rounded-lg overflow-hidden">
-        <div className="p-4 border-b border-patilla-border flex items-center justify-between">
-          <h4 className="font-semibold text-gray-700 flex items-center gap-2 text-sm sm:text-base">
-            <Users size={18} className="text-gray-500" />
-            Historial de Pagos a Empleados
-          </h4>
-          <span className="text-xs text-gray-400">{pagos.length} registros</span>
-        </div>
-
+      {/* Tabla Responsiva de Pagos */}
+      <div className="bg-white border border-patilla-border rounded-2xl overflow-hidden shadow-2xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-[550px]">
             <thead>
-              <tr className="bg-patilla-bg text-xs text-gray-500 uppercase">
-                <th className="p-3 sm:p-4 font-medium">Fecha</th>
-                <th className="p-3 sm:p-4 font-medium">Trabajador / Vendedor</th>
-                <th className="p-3 sm:p-4 font-medium">Concepto / Observación</th>
-                <th className="p-3 sm:p-4 font-medium text-right">Monto Pagado</th>
+              <tr className="bg-patilla-bg text-[11px] text-gray-500 uppercase tracking-wider">
+                <th className="p-3.5 font-bold">Fecha</th>
+                <th className="p-3.5 font-bold">Colaborador</th>
+                <th className="p-3.5 font-bold">Concepto / Novedad</th>
+                <th className="p-3.5 font-bold text-right">Monto Pagado</th>
               </tr>
             </thead>
             <tbody className="text-sm">
@@ -308,245 +169,123 @@ export default function AdminPagos() {
                 <tr>
                   <td colSpan="4" className="p-8 text-center text-gray-400">
                     <RefreshCw size={24} className="animate-spin mx-auto mb-2 text-gray-400" />
-                    Cargando pagos...
+                    Cargando nómina...
                   </td>
                 </tr>
               ) : pagos.length === 0 ? (
                 <tr>
                   <td colSpan="4" className="p-8 text-center text-gray-400">
-                    <DollarSign size={28} className="mx-auto mb-2 text-gray-300" />
+                    <Users size={28} className="mx-auto mb-2 text-gray-300" />
                     No hay pagos registrados para este local.
                   </td>
                 </tr>
               ) : (
-                pagos.map((pago) => (
-                  <tr key={pago.id} className="border-b border-patilla-border hover:bg-gray-50 transition-colors">
-                    <td className="p-3 sm:p-4 text-gray-600 flex items-center gap-1.5">
-                      <Calendar size={14} className="text-gray-400" />
-                      {new Date(pago.fechaPago).toLocaleDateString('es-CO', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </td>
-                    <td className="p-3 sm:p-4 font-semibold text-gray-800">
-                      {getNombreVendedor(pago.vendedorId)}
-                    </td>
-                    <td className="p-3 sm:p-4 text-gray-600">
-                      {pago.observacion || 'Sin observaciones'}
-                    </td>
-                    <td className="p-3 sm:p-4 text-right font-bold text-green-700">
-                      {formatearDinero(pago.monto)}
-                    </td>
-                  </tr>
-                ))
+                pagos.map((p) => {
+                  const colaborador = usuarios.find(u => u.id === p.vendedorId);
+                  return (
+                    <tr key={p.id} className="border-b border-patilla-border hover:bg-gray-50 transition-colors">
+                      <td className="p-3.5 text-gray-600 text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar size={14} className="text-gray-400" />
+                          <span>{new Date(p.fechaPago).toLocaleDateString('es-CO')}</span>
+                        </div>
+                      </td>
+                      <td className="p-3.5 font-bold text-gray-800 text-xs sm:text-sm">
+                        {colaborador?.nombre || `Vendedor #${p.vendedorId}`}
+                      </td>
+                      <td className="p-3.5 text-gray-600 text-xs">
+                        {p.observacion || 'Pago de turno diario'}
+                      </td>
+                      <td className="p-3.5 text-right font-black text-gray-900 text-xs sm:text-sm">
+                        {formatearDinero(p.monto)}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* --- MODAL NUEVO VENDEDOR --- */}
-      {isVendedorModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      {/* --- MODAL REGISTRAR PAGO --- */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-2xs flex items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden max-h-[92vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
             <div className="p-4 border-b border-patilla-border flex justify-between items-center bg-gray-50">
-              <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                <UserPlus size={18} className="text-gray-700" /> Registrar Nuevo Vendedor
+              <h3 className="font-bold text-gray-800 text-sm sm:text-base flex items-center gap-2">
+                <DollarSign size={17} className="text-green-700" /> Registrar Pago a Colaborador
               </h3>
               <button
-                onClick={() => setIsVendedorModalOpen(false)}
-                className="text-gray-400 hover:text-gray-700 p-1"
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-400 hover:text-gray-700 p-1 rounded-lg"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleCrearVendedor}>
-              <div className="p-6 space-y-4">
-                {modalError && (
-                  <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs flex items-start gap-2">
-                    <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
-                    <span>{modalError}</span>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Nombre Completo</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ej. Ana Pérez"
-                    value={vendedorForm.nombre}
-                    onChange={(e) => setVendedorForm({ ...vendedorForm, nombre: e.target.value })}
-                    className="w-full p-2.5 border border-patilla-border rounded-lg text-sm bg-patilla-bg outline-none focus:border-gray-500 font-medium"
-                  />
+            <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 overflow-y-auto">
+              {formError && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs flex items-center gap-2">
+                  <AlertCircle size={15} /> {formError}
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Correo Electrónico (Login)</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="ana@patilladash.com"
-                    value={vendedorForm.email}
-                    onChange={(e) => setVendedorForm({ ...vendedorForm, email: e.target.value })}
-                    className="w-full p-2.5 border border-patilla-border rounded-lg text-sm bg-patilla-bg outline-none focus:border-gray-500 font-medium"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Contraseña</label>
-                    <input
-                      type="password"
-                      required
-                      placeholder="Mínimo 6 carac."
-                      value={vendedorForm.password}
-                      onChange={(e) => setVendedorForm({ ...vendedorForm, password: e.target.value })}
-                      className="w-full p-2.5 border border-patilla-border rounded-lg text-sm bg-patilla-bg outline-none focus:border-gray-500 font-medium"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Asignar Sede</label>
-                    <select
-                      value={vendedorForm.localId}
-                      onChange={(e) => setVendedorForm({ ...vendedorForm, localId: Number(e.target.value) })}
-                      className="w-full p-2.5 border border-patilla-border rounded-lg text-sm bg-patilla-bg outline-none font-medium"
-                    >
-                      <option value={1}>Sede Centro (#1)</option>
-                      <option value={2}>Sede Norte (#2)</option>
-                    </select>
-                  </div>
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Colaborador / Vendedor</label>
+                <select
+                  value={formData.vendedorId}
+                  onChange={(e) => setFormData({ ...formData, vendedorId: e.target.value })}
+                  className="w-full p-3 border border-patilla-border rounded-xl text-sm bg-patilla-bg outline-none font-bold"
+                >
+                  {usuarios.map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.nombre} ({u.nombreLocal})
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              <div className="p-4 border-t border-patilla-border bg-gray-50 flex justify-end gap-3">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Monto Pagado ($ COP)</label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min="1"
+                  required
+                  placeholder="Ej. 50000"
+                  value={formData.monto}
+                  onChange={(e) => setFormData({ ...formData, monto: e.target.value })}
+                  className="w-full p-3 border border-patilla-border rounded-xl text-sm bg-patilla-bg outline-none font-black"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Concepto / Observación</label>
+                <input
+                  type="text"
+                  placeholder="Ej. Pago turno completo + transporte"
+                  value={formData.observacion}
+                  onChange={(e) => setFormData({ ...formData, observacion: e.target.value })}
+                  className="w-full p-3 border border-patilla-border rounded-xl text-sm bg-patilla-bg outline-none"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-2 justify-end">
                 <button
                   type="button"
-                  onClick={() => setIsVendedorModalOpen(false)}
-                  className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-200 rounded-lg font-semibold transition-colors"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2.5 text-xs font-bold bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-2 text-sm bg-patilla-primary hover:bg-patilla-primary-hover text-gray-900 font-bold rounded-lg transition-colors disabled:opacity-50 shadow-xs"
+                  className="flex-1 px-4 py-2.5 text-xs font-bold bg-patilla-primary hover:bg-patilla-primary-hover text-gray-900 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-2xs"
                 >
-                  {submitting ? 'Creando...' : 'Crear Vendedor'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* --- MODAL REGISTRAR PAGO (SEDE AUTOMÁTICA Y BLOQUEADA SEGÚN EL COLABORADOR) --- */}
-      {isPagoModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="p-4 border-b border-patilla-border flex justify-between items-center bg-gray-50">
-              <h3 className="font-bold text-gray-800 flex items-center gap-2 text-green-800">
-                <DollarSign size={18} /> Registrar Pago en Nómina
-              </h3>
-              <button
-                onClick={() => setIsPagoModalOpen(false)}
-                className="text-gray-400 hover:text-gray-700 p-1"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <form onSubmit={handleRegistrarPago}>
-              <div className="p-6 space-y-4">
-                {modalError && (
-                  <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-xs flex items-start gap-2">
-                    <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
-                    <span>{modalError}</span>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Seleccionar Trabajador / Vendedor
-                  </label>
-                  {vendedores.length > 0 ? (
-                    <select
-                      value={pagoForm.vendedorId}
-                      onChange={handleSelectVendedorPago}
-                      required
-                      className="w-full p-2.5 border border-patilla-border rounded-lg text-sm bg-patilla-bg font-bold text-gray-800 outline-none focus:border-gray-500"
-                    >
-                      {vendedores.map((vend) => (
-                        <option key={vend.id} value={vend.id}>
-                          👤 {vend.nombre} — {vend.nombreLocal || `Sede #${vend.localId}`}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <p className="text-xs text-red-600 bg-red-50 p-2.5 rounded border border-red-200">
-                      No hay vendedores registrados. Usa el botón "Nuevo Vendedor" primero.
-                    </p>
-                  )}
-                </div>
-
-                {/* Sede Asignada (Informativa y fijada para evitar inconsistencias) */}
-                <div className="p-3 bg-patilla-bg border border-patilla-border rounded-lg flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Building2 size={16} className="text-gray-500" />
-                    <div>
-                      <p className="text-[11px] text-gray-500 font-semibold">Sede donde se imputa el pago:</p>
-                      <p className="text-xs font-bold text-gray-800">
-                        {vendedorActualSeleccionado?.nombreLocal || `Sede #${pagoForm.localId}`}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] bg-green-100 text-green-800 font-bold px-2 py-0.5 rounded border border-green-200">
-                    Sede Oficial
-                  </span>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Monto a Pagar ($ COP)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    placeholder="Ej. 60000"
-                    value={pagoForm.monto}
-                    onChange={(e) => setPagoForm({ ...pagoForm, monto: e.target.value })}
-                    className="w-full p-2.5 border border-patilla-border rounded-lg text-sm bg-patilla-bg outline-none focus:border-gray-500 font-bold text-green-800"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Concepto / Observación</label>
-                  <input
-                    type="text"
-                    placeholder="Ej. Día laborado / Turno completo / Anticipo"
-                    value={pagoForm.observacion}
-                    onChange={(e) => setPagoForm({ ...pagoForm, observacion: e.target.value })}
-                    className="w-full p-2.5 border border-patilla-border rounded-lg text-sm bg-patilla-bg outline-none focus:border-gray-500"
-                  />
-                </div>
-              </div>
-
-              <div className="p-4 border-t border-patilla-border bg-gray-50 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsPagoModalOpen(false)}
-                  className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-200 rounded-lg font-semibold transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting || vendedores.length === 0}
-                  className="px-4 py-2 text-sm bg-patilla-secondary hover:bg-green-300 text-green-900 font-bold rounded-lg transition-colors disabled:opacity-50 shadow-xs"
-                >
-                  {submitting ? 'Registrando...' : 'Confirmar Pago'}
+                  {submitting ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+                  Registrar Pago
                 </button>
               </div>
             </form>
