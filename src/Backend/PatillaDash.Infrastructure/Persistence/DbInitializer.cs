@@ -30,12 +30,12 @@ public static class DbInitializer
                     SELECT data_type 
                     FROM information_schema.columns 
                     WHERE table_schema = 'public' 
-                      AND table_name = 'Locales' 
-                      AND column_name = 'Activo'
+                      AND LOWER(table_name) = 'locales' 
+                      AND LOWER(column_name) = 'activo'
                     LIMIT 1;";
                 var dataType = await checkCmd.ExecuteScalarAsync();
 
-                if (dataType != null && dataType.ToString()?.Equals("integer", StringComparison.OrdinalIgnoreCase) == true)
+                if (dataType != null && !dataType.ToString()!.Contains("bool", StringComparison.OrdinalIgnoreCase))
                 {
                     // Limpieza preventiva de tablas con tipos legacy
                     using var dropCmd = conn.CreateCommand();
