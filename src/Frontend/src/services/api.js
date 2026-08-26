@@ -70,6 +70,10 @@ export const comprasService = {
 
 export const pagosService = {
   registrarPago: (data) => api.post('/pagos', data),
+  obtenerHistorial: (localId) => {
+    const params = localId ? { localId } : {};
+    return api.get('/pagos', { params });
+  },
   obtenerPorLocal: (localId) => api.get(`/pagos/local/${localId}`),
   obtenerPorVendedor: (vendedorId) => api.get(`/pagos/vendedor/${vendedorId}`),
 };
@@ -102,6 +106,7 @@ export const productosService = {
   crear: (data) => api.post('/productos', data),
   actualizar: (id, data) => api.put(`/productos/${id}`, data),
   desactivar: (id) => api.delete(`/productos/${id}`),
+  cambiarEstado: (id) => api.patch(`/productos/${id}/toggle`),
 };
 
 export default api;
