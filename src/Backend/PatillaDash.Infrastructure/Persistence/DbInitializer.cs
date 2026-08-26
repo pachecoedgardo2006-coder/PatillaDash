@@ -13,37 +13,51 @@ public static class DbInitializer
 {
     public static async Task SeedAsync(PatillaDbContext context, IPasswordHasher passwordHasher)
     {
-        // 0. En PostgreSQL / Supabase, si la tabla "Locales" existe pero está vacía debido al fallo inicial
-        // con los tipos de SQLite (integer para bool), limpiamos las tablas y el historial
-        // para que MigrateAsync las cree limpiamente con tipos nativos (boolean, numeric, timestamp).
+        // 0. En PostgreSQL / Supabase / Render:
+        // Si las tablas se crearon previamente con definiciones incompatibles (por ejemplo "Activo" como integer),
+        // realizamos una limpieza preventiva para que MigrateAsync cree las tablas con los tipos nativos
+        // (boolean, numeric(18,2), timestamp).
         if (context.Database.IsNpgsql())
         {
             try
             {
-                await context.Database.ExecuteSqlRawAsync(@"
-                    DO $$ 
-                    BEGIN
-                        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'Locales') THEN
-                            IF NOT EXISTS (SELECT 1 FROM ""Locales"") THEN
-                                DROP TABLE IF EXISTS ""ConsumosSuministroDiario"" CASCADE;
-                                DROP TABLE IF EXISTS ""DetallesVentaDiaria"" CASCADE;
-                                DROP TABLE IF EXISTS ""InventariosLocal"" CASCADE;
-                                DROP TABLE IF EXISTS ""PagosEmpleado"" CASCADE;
-                                DROP TABLE IF EXISTS ""ComprasInsumo"" CASCADE;
-                                DROP TABLE IF EXISTS ""RegistrosVentaDiaria"" CASCADE;
-                                DROP TABLE IF EXISTS ""Usuarios"" CASCADE;
-                                DROP TABLE IF EXISTS ""Productos"" CASCADE;
-                                DROP TABLE IF EXISTS ""Suministros"" CASCADE;
-                                DROP TABLE IF EXISTS ""Locales"" CASCADE;
-                                DROP TABLE IF EXISTS ""__EFMigrationsHistory"" CASCADE;
-                            END IF;
-                        END IF;
-                    END $$;
-                ");
+                var conn = context.Database.GetDbConnection();
+                if (conn.State != System.Data.ConnectionState.Open)
+                {
+                    await conn.OpenAsync();
+                }
+
+                // Averiguar si la columna "Activo" de "Locales" tiene tipo incompatible (integer en vez de boolean)
+                using var checkCmd = conn.CreateCommand();
+                checkCmd.CommandText = @"
+                    SELECT data_type 
+                    FROM information_schema.columns 
+                    WHERE LOWER(table_name) = 'locales' 
+                      AND LOWER(column_name) = 'activo'
+                    LIMIT 1;";
+                var dataType = (await checkCmd.ExecuteScalarAsync())?.ToString();
+
+                if (dataType != null && !dataType.Contains("bool", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine($"[DbInitializer] Esquema legacy detectado en Locales.Activo ('{dataType}'). Recreando tablas en PostgreSQL...");
+                    using var dropCmd = conn.CreateCommand();
+                    dropCmd.CommandText = @"
+                        DROP TABLE IF EXISTS ""ConsumosSuministroDiario"", ""DetallesVentaDiaria"", ""InventariosLocal"", 
+                                              ""PagosEmpleado"", ""ComprasInsumo"", ""RegistrosVentaDiaria"", 
+                                              ""Usuarios"", ""Productos"", ""Suministros"", ""Locales"", 
+                                              ""__EFMigrationsHistory"" CASCADE;
+                        DROP TABLE IF EXISTS consumos_suministro_diario, detalles_venta_diaria, inventarios_local, 
+                                              pagos_empleado, compras_insumo, registros_venta_diaria, 
+                                              usuarios, productos, suministros, locales CASCADE;
+                        DROP TABLE IF EXISTS consumossuministrodiario, detallesventadiaria, inventarioslocal, 
+                                              pagosempleado, comprasinsumo, registrosventadiaria, 
+                                              usuarios, productos, suministros, locales CASCADE;";
+                    await dropCmd.ExecuteNonQueryAsync();
+                }
             }
-            catch
+            catch (Exception ex)
             {
-                // Silencioso si la conexión o tablas no existen aún
+                Console.WriteLine($"[DbInitializer] Nota en verificación preventiva de PostgreSQL: {ex.Message}");
             }
         }
 
@@ -52,16 +66,51 @@ public static class DbInitializer
         {
             await context.Database.MigrateAsync();
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"[DbInitializer] MigrateAsync fallo: {ex.Message}. Intentando CreateTablesAsync()...");
             try
             {
                 var databaseCreator = (RelationalDatabaseCreator)context.Database.GetService<IDatabaseCreator>();
                 await databaseCreator.CreateTablesAsync();
             }
-            catch
+            catch (Exception ex2)
             {
-                // Si las tablas de PatillaDash ya existen, continuar a la siembra
+                Console.WriteLine($"[DbInitializer] Fallo fallback CreateTablesAsync: {ex2.Message}");
+            }
+        }
+
+        // 1.1 Seguridad preventiva adicional: asegurar que cualquier columna "Activo" que haya quedado sea boolean
+        if (context.Database.IsNpgsql())
+        {
+            try
+            {
+                await context.Database.ExecuteSqlRawAsync(@"
+                    DO $$ 
+                    BEGIN
+                        IF EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE LOWER(table_name) = 'locales' 
+                              AND LOWER(column_name) = 'activo' 
+                              AND data_type IN ('integer', 'smallint', 'bigint', 'numeric')
+                        ) THEN
+                            EXECUTE 'ALTER TABLE ""Locales"" ALTER COLUMN ""Activo"" TYPE boolean USING (""Activo""::text = ''1'' OR ""Activo""::text = ''true'')';
+                        END IF;
+
+                        IF EXISTS (
+                            SELECT 1 FROM information_schema.columns 
+                            WHERE LOWER(table_name) = 'productos' 
+                              AND LOWER(column_name) = 'activo' 
+                              AND data_type IN ('integer', 'smallint', 'bigint', 'numeric')
+                        ) THEN
+                            EXECUTE 'ALTER TABLE ""Productos"" ALTER COLUMN ""Activo"" TYPE boolean USING (""Activo""::text = ''1'' OR ""Activo""::text = ''true'')';
+                        END IF;
+                    END $$;
+                ");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DbInitializer] Ajuste final de tipos boolean: {ex.Message}");
             }
         }
 
