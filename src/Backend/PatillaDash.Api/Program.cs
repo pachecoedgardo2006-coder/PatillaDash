@@ -10,6 +10,10 @@ using PatillaDash.Infrastructure;
 using PatillaDash.Infrastructure.Persistence;
 using Scalar.AspNetCore;
 
+// Optimización crítica para contenedores Linux / Render (Evita error IOException: inotify instances limit alcanzado)
+Environment.SetEnvironmentVariable("DOTNET_USE_POLLING_FILE_WATCHER", "true");
+Environment.SetEnvironmentVariable("DOTNET_EnableDiagnostics", "0");
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Soporte dinámico de Puerto para Cloud / Render (variable de entorno PORT)

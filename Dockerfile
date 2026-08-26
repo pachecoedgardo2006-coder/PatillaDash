@@ -25,9 +25,11 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 
-# Environment configuration para Render y Cloud
+# Environment configuration para Render y Cloud (Previene problemas de inotify en Linux containers)
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV PORT=10000
+ENV DOTNET_USE_POLLING_FILE_WATCHER=true
+ENV DOTNET_EnableDiagnostics=0
 
 # Render detecta este puerto por defecto
 EXPOSE 10000 8080
