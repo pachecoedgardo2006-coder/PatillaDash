@@ -13,46 +13,33 @@ public static class DbInitializer
 {
     public static async Task SeedAsync(PatillaDbContext context, IPasswordHasher passwordHasher)
     {
-        // 0. En PostgreSQL / Supabase, si las tablas se crearon previamente con tipos antiguos de SQLite (integer para bool),
-        // realizamos una limpieza previa segura del esquema para que las migraciones creen los tipos nativos correctos (boolean, numeric, timestamp).
+        // 0. En PostgreSQL / Supabase, si la tabla "Locales" existe pero está vacía debido al fallo inicial
+        // con los tipos de SQLite (integer para bool), limpiamos las tablas y el historial
+        // para que MigrateAsync las cree limpiamente con tipos nativos (boolean, numeric, timestamp).
         if (context.Database.IsNpgsql())
         {
             try
             {
-                var conn = context.Database.GetDbConnection();
-                if (conn.State != System.Data.ConnectionState.Open)
-                {
-                    await conn.OpenAsync();
-                }
-
-                using var checkCmd = conn.CreateCommand();
-                checkCmd.CommandText = @"
-                    SELECT data_type 
-                    FROM information_schema.columns 
-                    WHERE table_schema = 'public' 
-                      AND LOWER(table_name) = 'locales' 
-                      AND LOWER(column_name) = 'activo'
-                    LIMIT 1;";
-                var dataType = await checkCmd.ExecuteScalarAsync();
-
-                if (dataType != null && !dataType.ToString()!.Contains("bool", StringComparison.OrdinalIgnoreCase))
-                {
-                    // Limpieza preventiva de tablas con tipos legacy
-                    using var dropCmd = conn.CreateCommand();
-                    dropCmd.CommandText = @"
-                        DROP TABLE IF EXISTS ""ConsumosSuministroDiario"" CASCADE;
-                        DROP TABLE IF EXISTS ""DetallesVentaDiaria"" CASCADE;
-                        DROP TABLE IF EXISTS ""InventariosLocal"" CASCADE;
-                        DROP TABLE IF EXISTS ""PagosEmpleado"" CASCADE;
-                        DROP TABLE IF EXISTS ""ComprasInsumo"" CASCADE;
-                        DROP TABLE IF EXISTS ""RegistrosVentaDiaria"" CASCADE;
-                        DROP TABLE IF EXISTS ""Usuarios"" CASCADE;
-                        DROP TABLE IF EXISTS ""Productos"" CASCADE;
-                        DROP TABLE IF EXISTS ""Suministros"" CASCADE;
-                        DROP TABLE IF EXISTS ""Locales"" CASCADE;
-                        DROP TABLE IF EXISTS ""__EFMigrationsHistory"" CASCADE;";
-                    await dropCmd.ExecuteNonQueryAsync();
-                }
+                await context.Database.ExecuteSqlRawAsync(@"
+                    DO $$ 
+                    BEGIN
+                        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'Locales') THEN
+                            IF NOT EXISTS (SELECT 1 FROM ""Locales"") THEN
+                                DROP TABLE IF EXISTS ""ConsumosSuministroDiario"" CASCADE;
+                                DROP TABLE IF EXISTS ""DetallesVentaDiaria"" CASCADE;
+                                DROP TABLE IF EXISTS ""InventariosLocal"" CASCADE;
+                                DROP TABLE IF EXISTS ""PagosEmpleado"" CASCADE;
+                                DROP TABLE IF EXISTS ""ComprasInsumo"" CASCADE;
+                                DROP TABLE IF EXISTS ""RegistrosVentaDiaria"" CASCADE;
+                                DROP TABLE IF EXISTS ""Usuarios"" CASCADE;
+                                DROP TABLE IF EXISTS ""Productos"" CASCADE;
+                                DROP TABLE IF EXISTS ""Suministros"" CASCADE;
+                                DROP TABLE IF EXISTS ""Locales"" CASCADE;
+                                DROP TABLE IF EXISTS ""__EFMigrationsHistory"" CASCADE;
+                            END IF;
+                        END IF;
+                    END $$;
+                ");
             }
             catch
             {
