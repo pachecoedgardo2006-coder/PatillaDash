@@ -20,10 +20,12 @@ Bienvenido al repositorio central de **PatillaDash**, una solución web full-sta
    - [Flujo Directo de Reabastecimiento Crítico](#4-flujo-directo-de-reabastecimiento-crítico)
    - [Experiencia Móvil Optimizada y Error Boundary](#5-experiencia-móvil-optimizada-y-error-boundary)
 7. [Seguridad y Anti-Inyecciones SQL](#-seguridad-y-anti-inyecciones-sql)
-8. [Despliegue en la Nube (Cloud Architecture)](#-despliegue-en-la-nube-cloud-architecture)
+8. [Despliegue en la Nube y Costos Operativos ($0 USD)](#-despliegue-en-la-nube-y-costos-operativos-0-usd)
    - [Backend en Render](#backend-en-render-web-service)
    - [Frontend en Netlify](#frontend-en-netlify-spa)
-   - [Base de Datos PostgreSQL](#base-de-datos-postgresql-render--supabase)
+   - [Base de Datos PostgreSQL (Supabase)](#base-de-datos-postgresql-supabase)
+   - [Estrategia Keep-Alive 24/7 (Anti Cold-Start Gratuita)](#estrategia-keep-alive-247-anti-cold-start-gratuita)
+   - [Portabilidad y Migración Futura de Base de Datos](#portabilidad-y-migración-futura-de-base-de-datos)
 9. [Contratos de API y Endpoints](#-contratos-de-api-y-endpoints)
 10. [Documentación Interactiva (Scalar OpenAPI)](#-documentación-interactiva-scalar-openapi)
 11. [Pruebas Automatizadas (Testing)](#-pruebas-automatizadas)
@@ -43,7 +45,7 @@ El negocio de bebidas artesanales opera bajo el principio de **"Registro de Oper
 | Rol | Alcance | Vistas y Permisos Habilitados |
 | :--- | :--- | :--- |
 | **Vendedor** | Solo su local asignado (`LocalId`) | • **Formulario Asistido (Wizard 3 Pasos):** Efectivo, Transferencias, Productos Vendidos e Insumos consumidos del catálogo de la sede.<br>• **Mi Historial de Turnos:** Pestaña independiente paginada a 10 registros por página.<br>• **Toasts Flotantes:** Notificaciones fijas en la parte superior sin necesidad de scroll.<br>• **Mobile Friendly:** Prevención de auto-zoom en iOS Safari y teclado adaptativo. |
-| **Administrador** | Global (Todas las sedes) | • **Dashboard & BI:** Balance Neto, Ingresos, Gastos (Compras + Nómina), Alertas de Stock Crítico por Sede y **Modal Interactivo de Business Intelligence (BI)**.<br>• **Ventas y Cierres:** Historial general paginado (10 items) con **Auditoría de Cuadre** (Caja vs. Productos vendidos) y fechas estandarizadas.<br>• **Gestión de Productos:** Catálogo dinámico con activación/desactivación de items.<br>• **Inventario:** Stock en tiempo real, alertas y ajuste manual.<br>• **Compras y Reabastecimiento:** Panel prioritario de insumos críticos con compras a 1-clic y suma automática a inventario.<br>• **Personal y Nómina:** Registro de colaboradores y pagos con asignación estricta de sede. |
+| **Administrador** | Global (Todas las sedes) | • **Dashboard & BI:** Balance Neto, Ingresos, Gastos (Compras + Nómina), Alertas de Stock Crítico por Sede y **Modal Interactivo de Business Intelligence (BI)**.<br>• **Ventas y Cierres:** Historial general paginado (10 items) con **Auditoría de Cuadre** (Caja vs. Productos vendidos) y fechas estandarizadas.<br>• **Gestión de Productos:** Catálogo dinámico con activación/desactivación de ítems.<br>• **Inventario:** Stock en tiempo real, alertas y ajuste manual.<br>• **Compras y Reabastecimiento:** Panel prioritario de insumos críticos con compras a 1-clic y suma automática a inventario.<br>• **Personal y Nómina:** Registro de colaboradores y pagos con asignación estricta de sede. |
 
 ---
 
@@ -81,7 +83,8 @@ graph TD
     Infrastructure --> Application
     Application --> Domain[PatillaDash.Domain]
     Infrastructure --> Domain
-    Infrastructure --> DB[(PostgreSQL en la Nube / SQLite Local)]
+    Infrastructure --> DB[(PostgreSQL en Supabase / SQLite Local)]
+    Cron[cron-job.org / UptimeRobot] -->|Ping cada 10 min a /health| API
 ```
 
 ---
@@ -214,26 +217,56 @@ Al hacer clic en la tarjeta **Ingresos Totales (BI)** del Dashboard:
 
 ---
 
-## ☁️ Despliegue en la Nube (Cloud Architecture)
+## ☁️ Despliegue en la Nube y Costos Operativos ($0 USD)
+
+Toda la infraestructura productiva actual opera bajo planes gratuitos perpetuos:
+
+| Componente | Plataforma Elegida | Límite Gratuito Incluido | Costo Mensual |
+| :--- | :--- | :--- | :--- |
+| **Backend API** | [Render](https://render.com) (Web Service Linux) | 750 horas de cómputo / mes (suficiente para 24/7) | **$0.00** |
+| **Frontend SPA** | [Netlify](https://netlify.com) (CDN Edge) | 100 GB ancho de banda + 300 min build | **$0.00** |
+| **Base de Datos** | [Supabase](https://supabase.com) (PostgreSQL 15+) | 500 MB almacenamiento + backups automáticos | **$0.00** |
+| **Keep-Alive Monitor** | [cron-job.org](https://cron-job.org) | Tareas recurrentes ilimitadas y pings HTTP | **$0.00** |
 
 ### Backend en Render (Web Service)
 * **Entorno:** .NET 10 Web Service en Linux.
-* **URL:** `https://patilladash-api.onrender.com`
+* **URL Pública:** `https://patilladash-api.onrender.com`
 * **Variables de Entorno en Render:**
-  * `DATABASE_URL`: Cadena de conexión a PostgreSQL (`postgres://...`).
-  * `JWT_SECRET_KEY`: Llave criptográfica para firmas JWT.
-  * `PORT`: Determinado automáticamente por Render (ej. `10000`).
+  * `DATABASE_URL`: Cadena de conexión a PostgreSQL (`postgres://postgres:[PASSWORD]@[HOST]:[PORT]/postgres`).
+  * `JWT_SECRET_KEY`: Llave secreta para generación y validación de tokens JWT.
+  * `PORT`: Determinado dinámicamente por Render (ej. `10000`).
 
 ### Frontend en Netlify (SPA)
-* **Repositorio:** Conectado a GitHub vía CI/CD.
+* **Repositorio:** Conectado a GitHub vía CI/CD (despliegues automáticos con cada `git push`).
 * **Base directory:** `src/Frontend`
 * **Build command:** `npm run build`
 * **Publish directory:** `dist`
 * **Variables de Entorno en Netlify:**
   * `VITE_API_URL`: `https://patilladash-api.onrender.com/api`
 
-### Base de Datos (PostgreSQL Render / Supabase)
-* Soporte universal con `GENERATED BY DEFAULT AS IDENTITY` para auto-incrementos nativos en PostgreSQL, columnas `boolean` nativas y compatibilidad transparente con SQLite local.
+### Base de Datos PostgreSQL (Supabase)
+* Configurada con auto-incrementos nativos vía `GENERATED BY DEFAULT AS IDENTITY`, compatibilidad de tipos `boolean` y soporte de timestamps universales.
+
+### Estrategia Keep-Alive 24/7 (Anti Cold-Start Gratuita)
+En las nubes gratuitas, los servidores entran en suspensión tras 15 minutos de inactividad, lo que causa una demora de arranque de 30-50 segundos al siguiente usuario. Para garantizar respuesta en <200 ms a las vendedoras:
+* Se configuró un cronjob en **cron-job.org** que envía un `GET` cada 10 minutos a `https://patilladash-api.onrender.com/health`.
+* El endpoint responde en 1 milisegundo directamente desde memoria (`{ "status": "Healthy" }`), manteniendo el contenedor caliente sin consumir transferencias ni recursos de base de datos.
+* También admite solicitudes `HEAD` para monitores externos como **UptimeRobot**.
+
+### Portabilidad y Migración Futura de Base de Datos
+El proyecto fue construido bajo Clean Architecture con **cero dependencia propietaria de Supabase**:
+* **100% Estándar PostgreSQL:** No se usan extensiones exclusivas ni bloqueos de proveedor.
+* Si en el futuro se desea mudar a **Neon**, **Railway**, **Amazon Aurora / RDS**, **DigitalOcean** o un servidor propio:
+  1. Exportar datos actuales:
+     ```bash
+     pg_dump -h <HOST_SUPABASE> -U postgres -d postgres > backup_patilladash.sql
+     ```
+  2. Importar en el nuevo proveedor:
+     ```bash
+     psql -h <NUEVO_HOST> -U <NUEVO_USUARIO> -d <NUEVA_BD> < backup_patilladash.sql
+     ```
+  3. Actualizar la variable de entorno `DATABASE_URL` en el dashboard de Render.
+  4. **Cero cambios de código requeridos en la aplicación.**
 
 ---
 
