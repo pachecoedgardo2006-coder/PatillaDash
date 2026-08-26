@@ -14,9 +14,9 @@ public static class DbInitializer
     public static async Task SeedAsync(PatillaDbContext context, IPasswordHasher passwordHasher)
     {
         // 0. En PostgreSQL / Supabase / Render:
-        // Si las tablas se crearon previamente con definiciones incompatibles (por ejemplo "Activo" como integer),
-        // realizamos una limpieza preventiva para que MigrateAsync cree las tablas con los tipos nativos
-        // (boolean, numeric(18,2), timestamp).
+        // Si las tablas se crearon previamente con esquemas incompatibles (por ejemplo "Activo" como integer
+        // o "Id" sin autoincremento identity), realizamos una limpieza preventiva para que MigrateAsync
+        // cree todas las tablas limpiamente con sus tipos nativos e identidades completas.
         if (context.Database.IsNpgsql())
         {
             try
@@ -27,19 +27,30 @@ public static class DbInitializer
                     await conn.OpenAsync();
                 }
 
-                // Averiguar si la columna "Activo" de "Locales" tiene tipo incompatible (integer en vez de boolean)
+                // Averiguar si la tabla "Locales" existe y necesita reconstrucción
                 using var checkCmd = conn.CreateCommand();
                 checkCmd.CommandText = @"
-                    SELECT data_type 
+                    SELECT 
+                        COALESCE(bool_or(data_type NOT LIKE '%bool%'), false) AS legacy_activo,
+                        COALESCE(bool_or(is_identity = 'NO' AND column_default IS NULL), false) AS missing_identity
                     FROM information_schema.columns 
-                    WHERE LOWER(table_name) = 'locales' 
-                      AND LOWER(column_name) = 'activo'
-                    LIMIT 1;";
-                var dataType = (await checkCmd.ExecuteScalarAsync())?.ToString();
+                    WHERE (LOWER(table_name) = 'locales' AND LOWER(column_name) = 'activo')
+                       OR (LOWER(table_name) = 'locales' AND LOWER(column_name) = 'id');";
 
-                if (dataType != null && !dataType.Contains("bool", StringComparison.OrdinalIgnoreCase))
+                bool needsCleanRecreate = false;
+                using (var reader = await checkCmd.ExecuteReaderAsync())
                 {
-                    Console.WriteLine($"[DbInitializer] Esquema legacy detectado en Locales.Activo ('{dataType}'). Recreando tablas en PostgreSQL...");
+                    if (await reader.ReadAsync())
+                    {
+                        var legacyActivo = !reader.IsDBNull(0) && reader.GetBoolean(0);
+                        var missingIdentity = !reader.IsDBNull(1) && reader.GetBoolean(1);
+                        needsCleanRecreate = legacyActivo || missingIdentity;
+                    }
+                }
+
+                if (needsCleanRecreate)
+                {
+                    Console.WriteLine("[DbInitializer] Esquema incompatible detectado en PostgreSQL (Activo legacy o Id sin identity). Limpiando tablas...");
                     using var dropCmd = conn.CreateCommand();
                     dropCmd.CommandText = @"
                         DROP TABLE IF EXISTS ""ConsumosSuministroDiario"", ""DetallesVentaDiaria"", ""InventariosLocal"", 
@@ -80,14 +91,18 @@ public static class DbInitializer
             }
         }
 
-        // 1.1 Seguridad preventiva adicional: asegurar que cualquier columna "Activo" que haya quedado sea boolean
+        // 1.1 Seguridad preventiva adicional: asegurar que Id autoincremente y Activo sea boolean
         if (context.Database.IsNpgsql())
         {
             try
             {
                 await context.Database.ExecuteSqlRawAsync(@"
                     DO $$ 
+                    DECLARE
+                        tbl text;
+                        seq_name text;
                     BEGIN
+                        -- 1. Asegurar tipos boolean
                         IF EXISTS (
                             SELECT 1 FROM information_schema.columns 
                             WHERE LOWER(table_name) = 'locales' 
@@ -105,12 +120,30 @@ public static class DbInitializer
                         ) THEN
                             EXECUTE 'ALTER TABLE ""Productos"" ALTER COLUMN ""Activo"" TYPE boolean USING (""Activo""::text = ''1'' OR ""Activo""::text = ''true'')';
                         END IF;
+
+                        -- 2. Asegurar autoincremento en Id para todas las tablas si no son identity
+                        FOR tbl IN SELECT unnest(ARRAY['Locales', 'Productos', 'Suministros', 'Usuarios', 'ComprasInsumo', 'InventariosLocal', 'PagosEmpleado', 'RegistrosVentaDiaria', 'ConsumosSuministroDiario', 'DetallesVentaDiaria'])
+                        LOOP
+                            IF EXISTS (
+                                SELECT 1 FROM information_schema.columns 
+                                WHERE (table_name = tbl OR LOWER(table_name) = LOWER(tbl))
+                                  AND LOWER(column_name) = 'id' 
+                                  AND is_identity = 'NO' 
+                                  AND column_default IS NULL
+                            ) THEN
+                                seq_name := lower(tbl) || '_id_manual_seq';
+                                EXECUTE format('CREATE SEQUENCE IF NOT EXISTS %I', seq_name);
+                                EXECUTE format('ALTER TABLE %I ALTER COLUMN ""Id"" SET DEFAULT nextval(%L)', tbl, seq_name);
+                                EXECUTE format('ALTER SEQUENCE %I OWNED BY %I.""Id""', seq_name, tbl);
+                                EXECUTE format('SELECT setval(%L, COALESCE((SELECT MAX(""Id"") FROM %I), 0) + 1, false)', seq_name, tbl);
+                            END IF;
+                        END LOOP;
                     END $$;
                 ");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[DbInitializer] Ajuste final de tipos boolean: {ex.Message}");
+                Console.WriteLine($"[DbInitializer] Ajuste final de esquemas en PostgreSQL: {ex.Message}");
             }
         }
 

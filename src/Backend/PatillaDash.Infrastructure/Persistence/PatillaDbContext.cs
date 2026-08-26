@@ -30,5 +30,10 @@ public class PatillaDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(PatillaDbContext).Assembly);
+
+        if (Database.IsNpgsql())
+        {
+            modelBuilder.UseIdentityByDefaultColumns();
+        }
     }
 }

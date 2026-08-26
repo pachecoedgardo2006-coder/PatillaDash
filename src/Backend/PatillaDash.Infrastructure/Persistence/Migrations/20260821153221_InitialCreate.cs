@@ -16,7 +16,8 @@ namespace PatillaDash.Infrastructure.Persistence.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
+                        .Annotation("Sqlite:Autoincrement", true)
+                        .Annotation("Npgsql:ValueGenerationStrategy", Npgsql.EntityFrameworkCore.PostgreSQL.Metadata.NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Nombre = table.Column<string>(maxLength: 100, nullable: false),
                     Direccion = table.Column<string>(maxLength: 250, nullable: false),
                     Activo = table.Column<bool>(nullable: false)
@@ -31,7 +32,8 @@ namespace PatillaDash.Infrastructure.Persistence.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
+                        .Annotation("Sqlite:Autoincrement", true)
+                        .Annotation("Npgsql:ValueGenerationStrategy", Npgsql.EntityFrameworkCore.PostgreSQL.Metadata.NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Nombre = table.Column<string>(maxLength: 100, nullable: false),
                     PrecioBase = table.Column<decimal>(precision: 18, scale: 2, nullable: false),
                     Categoria = table.Column<string>(maxLength: 100, nullable: false)
@@ -46,7 +48,8 @@ namespace PatillaDash.Infrastructure.Persistence.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
+                        .Annotation("Sqlite:Autoincrement", true)
+                        .Annotation("Npgsql:ValueGenerationStrategy", Npgsql.EntityFrameworkCore.PostgreSQL.Metadata.NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Nombre = table.Column<string>(maxLength: 100, nullable: false),
                     UnidadMedida = table.Column<string>(maxLength: 50, nullable: false),
                     StockMinimoAlerta = table.Column<decimal>(precision: 18, scale: 2, nullable: false)
@@ -61,7 +64,8 @@ namespace PatillaDash.Infrastructure.Persistence.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
+                        .Annotation("Sqlite:Autoincrement", true)
+                        .Annotation("Npgsql:ValueGenerationStrategy", Npgsql.EntityFrameworkCore.PostgreSQL.Metadata.NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Nombre = table.Column<string>(maxLength: 100, nullable: false),
                     Email = table.Column<string>(maxLength: 150, nullable: false),
                     PasswordHash = table.Column<string>(maxLength: 256, nullable: false),
@@ -84,7 +88,8 @@ namespace PatillaDash.Infrastructure.Persistence.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
+                        .Annotation("Sqlite:Autoincrement", true)
+                        .Annotation("Npgsql:ValueGenerationStrategy", Npgsql.EntityFrameworkCore.PostgreSQL.Metadata.NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     LocalId = table.Column<int>(nullable: false),
                     SuministroId = table.Column<int>(nullable: false),
                     Cantidad = table.Column<decimal>(precision: 18, scale: 2, nullable: false),
@@ -114,7 +119,8 @@ namespace PatillaDash.Infrastructure.Persistence.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
+                        .Annotation("Sqlite:Autoincrement", true)
+                        .Annotation("Npgsql:ValueGenerationStrategy", Npgsql.EntityFrameworkCore.PostgreSQL.Metadata.NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     LocalId = table.Column<int>(nullable: false),
                     SuministroId = table.Column<int>(nullable: false),
                     CantidadDisponible = table.Column<decimal>(precision: 18, scale: 2, nullable: false)
@@ -141,7 +147,8 @@ namespace PatillaDash.Infrastructure.Persistence.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
+                        .Annotation("Sqlite:Autoincrement", true)
+                        .Annotation("Npgsql:ValueGenerationStrategy", Npgsql.EntityFrameworkCore.PostgreSQL.Metadata.NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     LocalId = table.Column<int>(nullable: false),
                     VendedorId = table.Column<int>(nullable: false),
                     Monto = table.Column<decimal>(precision: 18, scale: 2, nullable: false),
@@ -170,7 +177,8 @@ namespace PatillaDash.Infrastructure.Persistence.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
+                        .Annotation("Sqlite:Autoincrement", true)
+                        .Annotation("Npgsql:ValueGenerationStrategy", Npgsql.EntityFrameworkCore.PostgreSQL.Metadata.NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     LocalId = table.Column<int>(nullable: false),
                     VendedorId = table.Column<int>(nullable: false),
                     Fecha = table.Column<DateTime>(nullable: false),
@@ -200,7 +208,8 @@ namespace PatillaDash.Infrastructure.Persistence.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
+                        .Annotation("Sqlite:Autoincrement", true)
+                        .Annotation("Npgsql:ValueGenerationStrategy", Npgsql.EntityFrameworkCore.PostgreSQL.Metadata.NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     RegistroVentaDiariaId = table.Column<int>(nullable: false),
                     SuministroId = table.Column<int>(nullable: false),
                     CantidadGastada = table.Column<decimal>(precision: 18, scale: 2, nullable: false)
@@ -227,7 +236,8 @@ namespace PatillaDash.Infrastructure.Persistence.Migrations
                 columns: table => new
                 {
                     Id = table.Column<int>(nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
+                        .Annotation("Sqlite:Autoincrement", true)
+                        .Annotation("Npgsql:ValueGenerationStrategy", Npgsql.EntityFrameworkCore.PostgreSQL.Metadata.NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     RegistroVentaDiariaId = table.Column<int>(nullable: false),
                     ProductoId = table.Column<int>(nullable: false),
                     CantidadVendida = table.Column<int>(nullable: false),
