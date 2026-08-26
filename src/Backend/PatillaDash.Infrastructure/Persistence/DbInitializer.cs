@@ -1,5 +1,8 @@
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 using PatillaDash.Application.Interfaces;
 using PatillaDash.Domain.Entities;
 using PatillaDash.Domain.Enums;
@@ -10,14 +13,24 @@ public static class DbInitializer
 {
     public static async Task SeedAsync(PatillaDbContext context, IPasswordHasher passwordHasher)
     {
-        // En PostgreSQL / Supabase usamos EnsureCreatedAsync() o MigrateAsync() de forma segura
-        if (context.Database.IsNpgsql())
-        {
-            await context.Database.EnsureCreatedAsync();
-        }
-        else
+        // 0. Asegurar creación de tablas tanto en SQLite (local) como en PostgreSQL (Supabase / Render)
+        try
         {
             await context.Database.MigrateAsync();
+        }
+        catch
+        {
+            // En Supabase, si la base de datos postgres ya existe previamente pero sin las tablas de la app,
+            // forzamos la creación directa de las tablas del modelo
+            try
+            {
+                var databaseCreator = (RelationalDatabaseCreator)context.Database.GetService<IDatabaseCreator>();
+                await databaseCreator.CreateTablesAsync();
+            }
+            catch
+            {
+                // Si las tablas ya existían, continuar transparentemente a la siembra
+            }
         }
 
         // 1. Sembrar Locales Reales (Puntos de Venta)
