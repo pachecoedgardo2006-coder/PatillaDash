@@ -25,6 +25,7 @@ public class InventarioRepository : IInventarioRepository
     public async Task<IEnumerable<InventarioLocal>> GetByLocalIdAsync(int localId)
     {
         return await _context.Inventarios
+            .AsNoTracking()
             .Include(i => i.Suministro)
             .Where(i => i.LocalId == localId)
             .ToListAsync();
@@ -33,6 +34,7 @@ public class InventarioRepository : IInventarioRepository
     public async Task<IEnumerable<InventarioLocal>> GetAllAsync()
     {
         return await _context.Inventarios
+            .AsNoTracking()
             .Include(i => i.Suministro)
             .Include(i => i.Local)
             .ToListAsync();

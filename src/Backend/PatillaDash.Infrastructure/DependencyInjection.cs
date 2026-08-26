@@ -1,5 +1,6 @@
 using System;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PatillaDash.Application.Interfaces;
@@ -19,10 +20,17 @@ public static class DependencyInjection
             ?? configuration.GetConnectionString("DefaultConnection")
             ?? "Data Source=patilladash.db";
 
+        // Si contiene el placeholder de plantilla de producción de appsettings.Production.json, usar SQLite local
+        if (rawConnection.Contains("your-supabase-project", StringComparison.OrdinalIgnoreCase))
+        {
+            rawConnection = "Data Source=patilladash.db";
+        }
+
         var provider = configuration["DatabaseProvider"]?.ToLowerInvariant();
 
         // 2. Detección inteligente de PostgreSQL (Supabase / Render / Cloud) vs SQLite (Local)
-        bool isPostgres = provider == "postgres" ||
+        bool isPostgres = !rawConnection.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase) &&
+                         (provider == "postgres" ||
                           provider == "postgresql" ||
                           provider == "supabase" ||
                           rawConnection.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
@@ -30,25 +38,31 @@ public static class DependencyInjection
                           rawConnection.Contains("Host=", StringComparison.OrdinalIgnoreCase) ||
                           rawConnection.Contains("Server=", StringComparison.OrdinalIgnoreCase) ||
                           rawConnection.Contains("User Id=", StringComparison.OrdinalIgnoreCase) ||
-                          rawConnection.Contains("Username=", StringComparison.OrdinalIgnoreCase);
+                          rawConnection.Contains("Username=", StringComparison.OrdinalIgnoreCase));
 
         if (isPostgres)
         {
             var npgsqlConnectionString = ParsePostgreSqlConnectionString(rawConnection);
             services.AddDbContext<PatillaDbContext>(options =>
+            {
+                options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
                 options.UseNpgsql(npgsqlConnectionString, npgsqlOptions =>
                 {
                     npgsqlOptions.EnableRetryOnFailure(
                         maxRetryCount: 5,
                         maxRetryDelay: TimeSpan.FromSeconds(10),
                         errorCodesToAdd: null);
-                }));
+                });
+            });
         }
         else
         {
             // Entorno Local / SQLite por defecto
             services.AddDbContext<PatillaDbContext>(options =>
-                options.UseSqlite(rawConnection));
+            {
+                options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
+                options.UseSqlite(rawConnection);
+            });
         }
 
         // Repositorios
@@ -59,6 +73,7 @@ public static class DependencyInjection
         services.AddScoped<IVentaRepository, VentaRepository>();
         services.AddScoped<IPagoEmpleadoRepository, PagoEmpleadoRepository>();
         services.AddScoped<ICompraRepository, CompraRepository>();
+        services.AddScoped<IProductoRepository, ProductoRepository>();
 
         // Servicios de Seguridad y Token
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
@@ -68,7 +83,8 @@ public static class DependencyInjection
     }
 
     /// <summary>
-    /// Convierte URLs estándar estilo postgres://user:password@host:port/database a cadenas ADO.NET Npgsql compatibles
+    /// Normaliza cualquier formato de conexión de Supabase / PostgreSQL (URI postgres:// o ADO.NET Server=...)
+    /// asegurando SSL y compatibilidad total con Npgsql.
     /// </summary>
     private static string ParsePostgreSqlConnectionString(string raw)
     {
@@ -93,6 +109,12 @@ public static class DependencyInjection
             }
         }
 
-        return raw;
+        // Si ya viene formateada en formato ADO.NET (Server=... o Host=...)
+        var conn = raw.Trim();
+        if (!conn.Contains("SSL Mode=", StringComparison.OrdinalIgnoreCase))
+        {
+            conn = conn.TrimEnd(';') + ";SSL Mode=Require;Trust Server Certificate=true;";
+        }
+        return conn;
     }
 }

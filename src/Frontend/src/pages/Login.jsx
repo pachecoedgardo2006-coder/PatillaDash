@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/api';
@@ -10,8 +10,16 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { login } = useAuth();
+  const { user, login, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  // Si el usuario ya está autenticado, redirigir automáticamente
+  useEffect(() => {
+    if (!authLoading && user) {
+      const targetPath = user.rol === 'Administrador' ? '/admin' : '/vendedor';
+      navigate(targetPath, { replace: true });
+    }
+  }, [user, authLoading, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,14 +28,15 @@ export default function Login() {
 
     try {
       const response = await authService.login({ email, password });
+      
+      // 1. Guardar sesión en Context y LocalStorage
       login(response.data);
 
-      if (response.data.rol === 'Administrador') {
-        navigate('/admin');
-      } else {
-        navigate('/vendedor');
-      }
+      // 2. Redirección inmediata y limpia garantizada
+      const targetPath = response.data.rol === 'Administrador' ? '/admin' : '/vendedor';
+      window.location.replace(targetPath);
     } catch (err) {
+      setLoading(false);
       if (err.response?.data?.detail) {
         setError(err.response.data.detail);
       } else if (err.response?.data?.errors) {
@@ -38,8 +47,6 @@ export default function Login() {
       } else {
         setError('No se pudo conectar con el servidor backend.');
       }
-    } finally {
-      setLoading(false);
     }
   };
 

@@ -23,9 +23,9 @@ if (!string.IsNullOrEmpty(port))
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// Autenticación JWT Bearer
-var jwtSecretKey = builder.Configuration["Jwt:SecretKey"] 
-    ?? Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
+// Autenticación JWT Bearer con prioridad a variable de entorno JWT_SECRET_KEY
+var jwtSecretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
+    ?? builder.Configuration["Jwt:SecretKey"]
     ?? "PatillaDashSecretKey_ParaAutenticacionSeguraJWT_2026!";
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "PatillaDashApi";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "PatillaDashClient";

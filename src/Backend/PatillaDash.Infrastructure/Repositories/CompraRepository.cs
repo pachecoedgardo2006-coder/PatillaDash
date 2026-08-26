@@ -23,6 +23,7 @@ public class CompraRepository : ICompraRepository
     public async Task<IEnumerable<CompraInsumo>> GetByLocalIdAsync(int localId)
     {
         return await _context.ComprasInsumo
+            .AsNoTracking()
             .Include(c => c.Local)
             .Include(c => c.Suministro)
             .Where(c => c.LocalId == localId)
@@ -33,6 +34,7 @@ public class CompraRepository : ICompraRepository
     public async Task<IEnumerable<CompraInsumo>> GetAllByDateRangeAsync(DateTime desde, DateTime hasta)
     {
         return await _context.ComprasInsumo
+            .AsNoTracking()
             .Include(c => c.Local)
             .Include(c => c.Suministro)
             .Where(c => c.Fecha >= desde && c.Fecha <= hasta)

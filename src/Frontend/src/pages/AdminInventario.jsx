@@ -8,10 +8,11 @@ import {
   Edit3, 
   Check, 
   X, 
-  Search, 
   TrendingDown, 
   CheckCircle2, 
-  Building2 
+  Building2,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 export default function AdminInventario() {
@@ -20,6 +21,10 @@ export default function AdminInventario() {
   const [localSeleccionado, setLocalSeleccionado] = useState(1);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Paginación (10 items por página)
+  const [paginaActual, setPaginaActual] = useState(1);
+  const ITEMS_POR_PAGINA = 10;
 
   // Edición rápida de stock
   const [editandoItem, setEditandoItem] = useState(null);
@@ -31,6 +36,7 @@ export default function AdminInventario() {
     try {
       const response = await inventarioService.obtenerPorLocal(localId);
       setInventario(response.data || []);
+      setPaginaActual(1);
     } catch (err) {
       console.error('Error al cargar inventario:', err);
       setError('No se pudo cargar el inventario del local seleccionado.');
@@ -42,6 +48,13 @@ export default function AdminInventario() {
   useEffect(() => {
     cargarInventario(localSeleccionado);
   }, [localSeleccionado]);
+
+  // Paginación calculada
+  const totalPaginas = Math.ceil(inventario.length / ITEMS_POR_PAGINA) || 1;
+  const inventarioPaginado = inventario.slice(
+    (paginaActual - 1) * ITEMS_POR_PAGINA,
+    paginaActual * ITEMS_POR_PAGINA
+  );
 
   const handleIniciarEdicion = (item) => {
     setEditandoItem(item.suministroId);
@@ -101,17 +114,22 @@ export default function AdminInventario() {
             <option value={2}>Sede Sucursal Norte (#2)</option>
           </select>
         </div>
-        <button
-          onClick={() => cargarInventario(localSeleccionado)}
-          disabled={loading}
-          className="flex items-center justify-center gap-1.5 px-3.5 py-2 bg-gray-50 border border-patilla-border rounded-xl text-xs font-semibold text-gray-700 hover:bg-gray-100 transition-colors shrink-0 active:scale-95"
-        >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          Actualizar Stock
-        </button>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-gray-400 font-medium hidden sm:inline">
+            {inventario.length} {inventario.length === 1 ? 'insumo' : 'insumos'}
+          </span>
+          <button
+            onClick={() => cargarInventario(localSeleccionado)}
+            disabled={loading}
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2 bg-gray-50 border border-patilla-border rounded-xl text-xs font-semibold text-gray-700 hover:bg-gray-100 transition-colors shrink-0 active:scale-95 cursor-pointer"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            Actualizar Stock
+          </button>
+        </div>
       </div>
 
-      {/* Listado de Inventario Responsivo (Tabla / Cards) */}
+      {/* Listado de Inventario Responsivo */}
       <div className="bg-white border border-patilla-border rounded-2xl overflow-hidden shadow-2xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[580px]">
@@ -141,7 +159,7 @@ export default function AdminInventario() {
                   </td>
                 </tr>
               ) : (
-                inventario.map((item) => {
+                inventarioPaginado.map((item) => {
                   const enAlerta = item.cantidadDisponible <= item.stockMinimoAlerta;
                   const isEditing = editandoItem === item.suministroId;
 
@@ -221,6 +239,31 @@ export default function AdminInventario() {
             </tbody>
           </table>
         </div>
+
+        {/* Paginación */}
+        {totalPaginas > 1 && (
+          <div className="p-4 border-t border-patilla-border flex items-center justify-between bg-gray-50/70">
+            <button
+              onClick={() => setPaginaActual(prev => Math.max(1, prev - 1))}
+              disabled={paginaActual === 1}
+              className="px-3.5 py-2 text-xs font-bold bg-white border border-patilla-border rounded-xl text-gray-700 disabled:opacity-40 hover:bg-gray-100 flex items-center gap-1.5 active:scale-95 transition-all shadow-2xs cursor-pointer"
+            >
+              <ChevronLeft size={14} /> Anterior
+            </button>
+
+            <span className="text-xs text-gray-600 font-bold">
+              Página {paginaActual} de {totalPaginas}
+            </span>
+
+            <button
+              onClick={() => setPaginaActual(prev => Math.min(totalPaginas, prev + 1))}
+              disabled={paginaActual === totalPaginas}
+              className="px-3.5 py-2 text-xs font-bold bg-white border border-patilla-border rounded-xl text-gray-700 disabled:opacity-40 hover:bg-gray-100 flex items-center gap-1.5 active:scale-95 transition-all shadow-2xs cursor-pointer"
+            >
+              Siguiente <ChevronRight size={14} />
+            </button>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

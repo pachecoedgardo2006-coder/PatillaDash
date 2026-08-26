@@ -14,6 +14,7 @@ import AdminVentas from './pages/AdminVentas';
 import AdminInventario from './pages/AdminInventario';
 import AdminCompras from './pages/AdminCompras';
 import AdminPagos from './pages/AdminPagos';
+import AdminProductos from './pages/AdminProductos';
 
 export default function App() {
   return (
@@ -48,6 +49,15 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={['Administrador']}>
                 <AdminVentas />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/productos"
+            element={
+              <ProtectedRoute allowedRoles={['Administrador']}>
+                <AdminProductos />
               </ProtectedRoute>
             }
           />

@@ -20,9 +20,29 @@ public class PagoEmpleadoRepository : IPagoEmpleadoRepository
         await _context.SaveChangesAsync();
     }
 
+    public async Task<PagoEmpleado?> GetByIdAsync(int id)
+    {
+        return await _context.PagosEmpleado
+            .AsNoTracking()
+            .Include(p => p.Local)
+            .Include(p => p.Vendedor)
+            .FirstOrDefaultAsync(p => p.Id == id);
+    }
+
+    public async Task<IEnumerable<PagoEmpleado>> GetAllAsync()
+    {
+        return await _context.PagosEmpleado
+            .AsNoTracking()
+            .Include(p => p.Local)
+            .Include(p => p.Vendedor)
+            .OrderByDescending(p => p.FechaPago)
+            .ToListAsync();
+    }
+
     public async Task<IEnumerable<PagoEmpleado>> GetByLocalIdAsync(int localId)
     {
         return await _context.PagosEmpleado
+            .AsNoTracking()
             .Include(p => p.Local)
             .Include(p => p.Vendedor)
             .Where(p => p.LocalId == localId)
@@ -33,9 +53,21 @@ public class PagoEmpleadoRepository : IPagoEmpleadoRepository
     public async Task<IEnumerable<PagoEmpleado>> GetAllByDateRangeAsync(DateTime desde, DateTime hasta)
     {
         return await _context.PagosEmpleado
+            .AsNoTracking()
             .Include(p => p.Local)
             .Include(p => p.Vendedor)
             .Where(p => p.FechaPago >= desde && p.FechaPago <= hasta)
+            .OrderByDescending(p => p.FechaPago)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<PagoEmpleado>> GetByVendedorIdAsync(int vendedorId)
+    {
+        return await _context.PagosEmpleado
+            .AsNoTracking()
+            .Include(p => p.Local)
+            .Include(p => p.Vendedor)
+            .Where(p => p.VendedorId == vendedorId)
             .OrderByDescending(p => p.FechaPago)
             .ToListAsync();
     }

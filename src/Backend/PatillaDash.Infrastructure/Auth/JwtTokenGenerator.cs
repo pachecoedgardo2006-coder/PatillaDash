@@ -1,3 +1,4 @@
+using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -19,8 +20,9 @@ public class JwtTokenGenerator : IJwtTokenGenerator
 
     public string GenerateToken(Usuario usuario)
     {
-        var secretKey = _configuration["Jwt:SecretKey"]
-            ?? throw new InvalidOperationException("La clave secreta de JWT no está configurada en la aplicación.");
+        var secretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
+            ?? _configuration["Jwt:SecretKey"]
+            ?? "PatillaDashSecretKey_ParaAutenticacionSeguraJWT_2026!";
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

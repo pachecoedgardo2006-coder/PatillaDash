@@ -1,5 +1,5 @@
 # Multi-stage build for .NET 10 Web API
-FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /app
 
 # Copy solution and project files first to leverage Docker layer caching
@@ -21,14 +21,15 @@ WORKDIR /app/src/Backend/PatillaDash.Api
 RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false
 
 # Runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 
-# Environment configuration
-ENV ASPNETCORE_URLS=http://+:5000
+# Environment configuration para Render y Cloud
 ENV ASPNETCORE_ENVIRONMENT=Production
+ENV PORT=10000
 
-EXPOSE 5000
+# Render detecta este puerto por defecto
+EXPOSE 10000 8080
 
 ENTRYPOINT ["dotnet", "PatillaDash.Api.dll"]

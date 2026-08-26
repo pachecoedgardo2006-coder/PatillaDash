@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { ventasService, inventarioService } from '../services/api';
+import { ventasService, inventarioService, productosService } from '../services/api';
 import { 
   LogOut, 
   RefreshCw, 
@@ -59,13 +59,8 @@ export default function VendedorDashboard() {
   const [totalTransferencia, setTotalTransferencia] = useState('');
   const [notas, setNotas] = useState('');
 
-  // Catálogo de Productos
-  const [productos, setProductos] = useState([
-    { id: 1, nombre: 'Patillazo 16oz', precio: 5000, cantidad: 0 },
-    { id: 2, nombre: 'Patillazo 24oz', precio: 7000, cantidad: 0 },
-    { id: 3, nombre: 'Jarra Familiar Patilla', precio: 18000, cantidad: 0 },
-    { id: 4, nombre: 'Refresco Artesanal', precio: 4000, cantidad: 0 },
-  ]);
+  // Catálogo dinámico de Productos
+  const [productos, setProductos] = useState([]);
 
   // Consumo de Insumos Dinámico (key = suministroId, value = cantidad)
   const [consumos, setConsumos] = useState({});
@@ -75,9 +70,10 @@ export default function VendedorDashboard() {
   const cargarDatos = async () => {
     setLoading(true);
     try {
-      const [resInv, resVentas] = await Promise.allSettled([
+      const [resInv, resVentas, resProds] = await Promise.allSettled([
         inventarioService.obtenerPorLocal(localId),
         ventasService.obtenerPorLocal(localId),
+        productosService.obtenerTodos(true),
       ]);
 
       if (resInv.status === 'fulfilled') {
@@ -96,6 +92,16 @@ export default function VendedorDashboard() {
       }
       if (resVentas.status === 'fulfilled') {
         setHistorialVentas(resVentas.value.data || []);
+      }
+      if (resProds.status === 'fulfilled') {
+        const prods = (resProds.value.data || []).map(p => ({
+          id: p.id,
+          nombre: p.nombre,
+          precio: p.precioBase,
+          categoria: p.categoria,
+          cantidad: 0,
+        }));
+        setProductos(prods);
       }
     } catch (err) {
       console.error('Error al cargar datos del local:', err);
@@ -174,7 +180,7 @@ export default function VendedorDashboard() {
       }));
 
     if (consumosValidos.length === 0) {
-      mostrarToast('Declara al menos un insumo consumido (ej. patillas, vasos o hielo gastados).', 'error');
+      mostrarToast('Declara al menos un insumo consumido (ej. patillas, vasos o azúcar gastados).', 'error');
       return;
     }
 
@@ -209,7 +215,7 @@ export default function VendedorDashboard() {
       setTotalEfectivo('');
       setTotalTransferencia('');
       setNotas('');
-      setProductos(productos.map(p => ({ ...p, cantidad: 0 })));
+      setProductos(prev => prev.map(p => ({ ...p, cantidad: 0 })));
       
       const resetConsumos = {};
       inventario.forEach(i => resetConsumos[i.suministroId] = '');
@@ -257,7 +263,9 @@ export default function VendedorDashboard() {
     if (n.includes('patilla')) return '🍉';
     if (n.includes('vaso')) return '🥤';
     if (n.includes('azúcar') || n.includes('azucar')) return '🍬';
-    if (n.includes('hielo')) return '🧊';
+    if (n.includes('limón') || n.includes('limon')) return '🍋';
+    if (n.includes('dedito') || n.includes('pastel')) return '🥟';
+    if (n.includes('galleta')) return '🍪';
     return '📦';
   };
 
@@ -281,7 +289,7 @@ export default function VendedorDashboard() {
             </div>
             <button 
               onClick={() => setToast(prev => ({ ...prev, visible: false }))}
-              className="text-white/80 hover:text-white p-1 shrink-0"
+              className="text-white/80 hover:text-white p-1 shrink-0 cursor-pointer"
             >
               <X size={18} />
             </button>
@@ -307,7 +315,7 @@ export default function VendedorDashboard() {
               disabled={loading}
               title="Recargar datos"
               aria-label="Recargar"
-              className="p-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors active:scale-95"
+              className="p-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors active:scale-95 cursor-pointer"
             >
               <RefreshCw size={17} className={loading ? 'animate-spin' : ''} />
             </button>
@@ -315,7 +323,7 @@ export default function VendedorDashboard() {
               onClick={logout}
               title="Cerrar sesión"
               aria-label="Cerrar sesión"
-              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors active:scale-95"
+              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors active:scale-95 cursor-pointer"
             >
               <LogOut size={17} />
             </button>
@@ -328,7 +336,7 @@ export default function VendedorDashboard() {
         <div className="grid grid-cols-2 gap-2 bg-gray-200/70 p-1 rounded-xl">
           <button
             onClick={() => setActiveTab('cierre')}
-            className={`py-2.5 text-xs sm:text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-all ${
+            className={`py-2.5 text-xs sm:text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer ${
               activeTab === 'cierre'
                 ? 'bg-white text-gray-900 shadow-2xs'
                 : 'text-gray-500 hover:text-gray-800'
@@ -339,7 +347,7 @@ export default function VendedorDashboard() {
           </button>
           <button
             onClick={() => setActiveTab('historial')}
-            className={`py-2.5 text-xs sm:text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-all ${
+            className={`py-2.5 text-xs sm:text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer ${
               activeTab === 'historial'
                 ? 'bg-white text-gray-900 shadow-2xs'
                 : 'text-gray-500 hover:text-gray-800'
@@ -370,7 +378,7 @@ export default function VendedorDashboard() {
                 <button
                   type="button"
                   onClick={() => setPasoActual(1)}
-                  className={`relative z-10 w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
+                  className={`relative z-10 w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-colors cursor-pointer ${
                     pasoActual >= 1 ? 'bg-patilla-primary text-gray-900 ring-4 ring-white shadow-2xs font-extrabold' : 'bg-gray-200 text-gray-500'
                   }`}
                 >
@@ -381,7 +389,7 @@ export default function VendedorDashboard() {
                 <button
                   type="button"
                   onClick={() => { if (validarPaso1()) setPasoActual(2); }}
-                  className={`relative z-10 w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
+                  className={`relative z-10 w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-colors cursor-pointer ${
                     pasoActual >= 2 ? 'bg-patilla-primary text-gray-900 ring-4 ring-white shadow-2xs font-extrabold' : 'bg-gray-200 text-gray-500'
                   }`}
                 >
@@ -392,7 +400,7 @@ export default function VendedorDashboard() {
                 <button
                   type="button"
                   onClick={() => { if (validarPaso1() && validarPaso2()) setPasoActual(3); }}
-                  className={`relative z-10 w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-colors ${
+                  className={`relative z-10 w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-colors cursor-pointer ${
                     pasoActual === 3 ? 'bg-patilla-primary text-gray-900 ring-4 ring-white shadow-2xs font-extrabold' : 'bg-gray-200 text-gray-500'
                   }`}
                 >
@@ -475,7 +483,7 @@ export default function VendedorDashboard() {
                 </div>
               )}
 
-              {/* --- PASO 2: PRODUCTOS VENDIDOS --- */}
+              {/* --- PASO 2: PRODUCTOS VENDIDOS DINÁMICOS --- */}
               {pasoActual === 2 && (
                 <div className="bg-white border border-patilla-border rounded-2xl p-5 shadow-2xs space-y-4">
                   <div className="border-b border-patilla-border pb-3">
@@ -488,36 +496,42 @@ export default function VendedorDashboard() {
                   </div>
 
                   <div className="space-y-3 pt-1">
-                    {productos.map((prod) => (
-                      <div
-                        key={prod.id}
-                        className="flex items-center justify-between p-3.5 bg-patilla-bg border border-patilla-border rounded-xl"
-                      >
-                        <div className="pr-2">
-                          <p className="font-bold text-gray-800 text-sm">{prod.nombre}</p>
-                          <p className="text-xs text-gray-500 font-medium">{formatearDinero(prod.precio)} c/u</p>
+                    {productos.length === 0 ? (
+                      <p className="text-xs text-gray-400 text-center py-6">
+                        Cargando catálogo de productos...
+                      </p>
+                    ) : (
+                      productos.map((prod) => (
+                        <div
+                          key={prod.id}
+                          className="flex items-center justify-between p-3.5 bg-patilla-bg border border-patilla-border rounded-xl"
+                        >
+                          <div className="pr-2">
+                            <p className="font-bold text-gray-800 text-sm">{prod.nombre}</p>
+                            <p className="text-xs text-gray-500 font-medium">{formatearDinero(prod.precio)} c/u</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => updateProductoCantidad(prod.id, -1)}
+                              className="w-10 h-10 rounded-xl bg-white border border-patilla-border flex items-center justify-center text-gray-700 font-bold hover:bg-gray-100 active:scale-90 transition-transform shadow-2xs cursor-pointer"
+                            >
+                              <Minus size={16} />
+                            </button>
+                            <span className="w-9 text-center font-black text-base text-gray-800">
+                              {prod.cantidad}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => updateProductoCantidad(prod.id, 1)}
+                              className="w-10 h-10 rounded-xl bg-patilla-primary flex items-center justify-center text-gray-900 font-bold hover:bg-patilla-primary-hover active:scale-90 transition-transform shadow-2xs cursor-pointer"
+                            >
+                              <Plus size={16} />
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => updateProductoCantidad(prod.id, -1)}
-                            className="w-10 h-10 rounded-xl bg-white border border-patilla-border flex items-center justify-center text-gray-700 font-bold hover:bg-gray-100 active:scale-90 transition-transform shadow-2xs"
-                          >
-                            <Minus size={16} />
-                          </button>
-                          <span className="w-9 text-center font-black text-base text-gray-800">
-                            {prod.cantidad}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => updateProductoCantidad(prod.id, 1)}
-                            className="w-10 h-10 rounded-xl bg-patilla-primary flex items-center justify-center text-gray-900 font-bold hover:bg-patilla-primary-hover active:scale-90 transition-transform shadow-2xs"
-                          >
-                            <Plus size={16} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
 
                     <div className="p-3.5 bg-gray-50 border border-patilla-border rounded-xl flex items-center justify-between">
                       <span className="text-xs font-bold text-gray-600">Total Estimado en Productos:</span>
@@ -529,14 +543,14 @@ export default function VendedorDashboard() {
                     <button
                       type="button"
                       onClick={retrocederPaso}
-                      className="px-4 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors text-sm"
+                      className="px-4 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors text-sm cursor-pointer"
                     >
                       <ChevronLeft size={16} /> Atrás
                     </button>
                     <button
                       type="button"
                       onClick={avanzarPaso}
-                      className="flex-1 py-3.5 bg-patilla-primary hover:bg-patilla-primary-hover text-gray-900 font-bold rounded-xl flex items-center justify-center gap-2 transition-transform active:scale-98 text-sm shadow-2xs"
+                      className="flex-1 py-3.5 bg-patilla-primary hover:bg-patilla-primary-hover text-gray-900 font-bold rounded-xl flex items-center justify-center gap-2 transition-transform active:scale-98 text-sm shadow-2xs cursor-pointer"
                     >
                       Siguiente: Insumos <ChevronRight size={17} />
                     </button>
@@ -583,7 +597,7 @@ export default function VendedorDashboard() {
                             <button
                               type="button"
                               onClick={() => ajustarConsumoDelta(item.suministroId, -1)}
-                              className="w-10 h-10 rounded-xl bg-white border border-patilla-border flex items-center justify-center text-gray-700 font-bold hover:bg-gray-100 active:scale-90 transition-transform shadow-2xs"
+                              className="w-10 h-10 rounded-xl bg-white border border-patilla-border flex items-center justify-center text-gray-700 font-bold hover:bg-gray-100 active:scale-90 transition-transform shadow-2xs cursor-pointer"
                             >
                               <Minus size={16} />
                             </button>
@@ -605,7 +619,7 @@ export default function VendedorDashboard() {
                             <button
                               type="button"
                               onClick={() => ajustarConsumoDelta(item.suministroId, 1)}
-                              className="w-10 h-10 rounded-xl bg-patilla-secondary/60 hover:bg-patilla-secondary flex items-center justify-center text-green-900 font-bold active:scale-90 transition-transform shadow-2xs"
+                              className="w-10 h-10 rounded-xl bg-patilla-secondary/60 hover:bg-patilla-secondary flex items-center justify-center text-green-900 font-bold active:scale-90 transition-transform shadow-2xs cursor-pointer"
                             >
                               <Plus size={16} />
                             </button>
@@ -620,7 +634,7 @@ export default function VendedorDashboard() {
                       </label>
                       <textarea
                         rows="2"
-                        placeholder="Ej. Se derritió una bolsa de hielo / Día con alta afluencia"
+                        placeholder="Ej. Se abrió paquete nuevo de vasos / Día con alta afluencia"
                         value={notas}
                         onChange={(e) => setNotas(e.target.value)}
                         className="w-full p-3 border border-patilla-border rounded-xl text-sm bg-patilla-bg outline-none focus:border-gray-500 focus:bg-white"
@@ -632,7 +646,7 @@ export default function VendedorDashboard() {
                     <button
                       type="button"
                       onClick={retrocederPaso}
-                      className="px-4 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors text-sm"
+                      className="px-4 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors text-sm cursor-pointer"
                     >
                       <ChevronLeft size={16} /> Atrás
                     </button>
@@ -731,7 +745,7 @@ export default function VendedorDashboard() {
                       <button
                         onClick={() => setPaginaActual(prev => Math.max(1, prev - 1))}
                         disabled={paginaActual === 1}
-                        className="px-3 py-2 text-xs font-bold bg-white border border-patilla-border rounded-xl text-gray-700 disabled:opacity-40 hover:bg-gray-50 flex items-center gap-1 active:scale-95"
+                        className="px-3 py-2 text-xs font-bold bg-white border border-patilla-border rounded-xl text-gray-700 disabled:opacity-40 hover:bg-gray-50 flex items-center gap-1 active:scale-95 cursor-pointer"
                       >
                         <ChevronLeft size={14} /> Anterior
                       </button>
@@ -743,7 +757,7 @@ export default function VendedorDashboard() {
                       <button
                         onClick={() => setPaginaActual(prev => Math.min(totalPaginas, prev + 1))}
                         disabled={paginaActual === totalPaginas}
-                        className="px-3 py-2 text-xs font-bold bg-white border border-patilla-border rounded-xl text-gray-700 disabled:opacity-40 hover:bg-gray-50 flex items-center gap-1 active:scale-95"
+                        className="px-3 py-2 text-xs font-bold bg-white border border-patilla-border rounded-xl text-gray-700 disabled:opacity-40 hover:bg-gray-50 flex items-center gap-1 active:scale-95 cursor-pointer"
                       >
                         Siguiente <ChevronRight size={14} />
                       </button>

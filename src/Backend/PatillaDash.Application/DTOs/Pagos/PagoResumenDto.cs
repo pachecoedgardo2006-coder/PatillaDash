@@ -9,5 +9,6 @@ public class PagoResumenDto
     public string NombreVendedor { get; set; } = string.Empty;
     public decimal Monto { get; set; }
     public DateTime FechaPago { get; set; }
+    public DateTime Fecha => FechaPago;
     public string? Observacion { get; set; }
 }

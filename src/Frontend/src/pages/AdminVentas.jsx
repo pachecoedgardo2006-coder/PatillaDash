@@ -3,20 +3,23 @@ import AdminLayout from '../components/AdminLayout';
 import { ventasService } from '../services/api';
 import { 
   ReceiptText, 
-  Search, 
-  Eye, 
-  X, 
   RefreshCw, 
   Calendar, 
   DollarSign, 
-  Package, 
-  ShoppingBag, 
-  MessageSquare, 
-  CreditCard, 
-  Banknote, 
+  Eye, 
+  X, 
   CheckCircle2, 
-  AlertTriangle, 
-  Scale 
+  AlertTriangle,
+  Building2,
+  ChevronLeft,
+  ChevronRight,
+  TrendingUp,
+  Banknote,
+  CreditCard,
+  ShoppingBag,
+  Package,
+  MessageSquare,
+  Scale
 } from 'lucide-react';
 
 export default function AdminVentas() {
@@ -24,10 +27,26 @@ export default function AdminVentas() {
   const [loading, setLoading] = useState(true);
   const [filtroLocal, setFiltroLocal] = useState('');
   const [error, setError] = useState('');
+
+  // Paginación (10 items por página)
+  const [paginaActual, setPaginaActual] = useState(1);
+  const ITEMS_POR_PAGINA = 10;
   
   // Modal de Detalle
   const [ventaSeleccionada, setVentaSeleccionada] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Bloqueo de scroll del fondo cuando el modal está abierto para evitar bugs en la barra móvil
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isModalOpen]);
 
   const cargarVentas = async (localId) => {
     setLoading(true);
@@ -35,6 +54,7 @@ export default function AdminVentas() {
     try {
       const response = await ventasService.obtenerHistorial(localId ? Number(localId) : null);
       setVentas(response.data || []);
+      setPaginaActual(1);
     } catch (err) {
       console.error('Error al cargar ventas:', err);
       setError('No se pudo cargar el historial de ventas.');
@@ -64,6 +84,13 @@ export default function AdminVentas() {
   const totalEfectivo = ventas.reduce((acc, curr) => acc + (curr.totalEfectivo || 0), 0);
   const totalTransferencia = ventas.reduce((acc, curr) => acc + (curr.totalTransferencia || 0), 0);
 
+  // Paginación calculada
+  const totalPaginas = Math.ceil(ventas.length / ITEMS_POR_PAGINA) || 1;
+  const ventasPaginadas = ventas.slice(
+    (paginaActual - 1) * ITEMS_POR_PAGINA,
+    paginaActual * ITEMS_POR_PAGINA
+  );
+
   // Cálculos para el modal seleccionado
   const totalProductosVendidos = ventaSeleccionada?.detalles?.reduce((acc, curr) => acc + (curr.subtotal || 0), 0) || 0;
   const totalCajaReportado = ventaSeleccionada ? (ventaSeleccionada.totalGeneral || (ventaSeleccionada.totalEfectivo + ventaSeleccionada.totalTransferencia)) : 0;
@@ -84,43 +111,47 @@ export default function AdminVentas() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-white border border-patilla-border rounded-2xl p-4 flex items-center justify-between shadow-2xs">
           <div>
-            <p className="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Total Ventas</p>
+            <p className="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Total Recaudado</p>
             <p className="text-xl sm:text-2xl font-black text-gray-800">{formatearDinero(totalVentas)}</p>
           </div>
-          <div className="p-2.5 bg-patilla-secondary/40 rounded-xl text-green-800">
-            <DollarSign size={22} />
+          <div className="p-3 bg-patilla-secondary/40 rounded-xl text-green-800">
+            <TrendingUp size={22} />
           </div>
         </div>
 
         <div className="bg-white border border-patilla-border rounded-2xl p-4 flex items-center justify-between shadow-2xs">
           <div>
-            <p className="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Total Efectivo</p>
+            <p className="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Efectivo en Caja</p>
             <p className="text-xl sm:text-2xl font-black text-gray-800">{formatearDinero(totalEfectivo)}</p>
           </div>
-          <div className="p-2.5 bg-green-100 rounded-xl text-green-700">
-            <Banknote size={20} />
+          <div className="p-3 bg-green-50 rounded-xl text-green-700 border border-green-200">
+            <Banknote size={22} />
           </div>
         </div>
 
         <div className="bg-white border border-patilla-border rounded-2xl p-4 flex items-center justify-between shadow-2xs">
           <div>
-            <p className="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Total Transferencias</p>
+            <p className="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Transferencias</p>
             <p className="text-xl sm:text-2xl font-black text-gray-800">{formatearDinero(totalTransferencia)}</p>
           </div>
-          <div className="p-2.5 bg-blue-100 rounded-xl text-blue-700">
-            <CreditCard size={20} />
+          <div className="p-3 bg-blue-50 rounded-xl text-blue-700 border border-blue-200">
+            <CreditCard size={22} />
           </div>
         </div>
       </div>
 
-      {/* Filtros */}
-      <div className="bg-white border border-patilla-border rounded-2xl p-4 mb-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-2xs">
+      {/* Filtro por Sede */}
+      <div className="bg-white border border-patilla-border rounded-2xl p-4 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-2xs">
         <div className="flex items-center gap-2">
-          <label className="text-xs font-bold text-gray-700 shrink-0">Sede:</label>
+          <ReceiptText size={18} className="text-gray-500" />
+          <h3 className="font-bold text-gray-800 text-sm sm:text-base">Historial de Cierres de Turno</h3>
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <label className="text-xs font-bold text-gray-700 shrink-0">Filtrar Sede:</label>
           <select
             value={filtroLocal}
             onChange={(e) => setFiltroLocal(e.target.value)}
-            className="flex-1 sm:flex-none p-2.5 border border-patilla-border rounded-xl text-xs sm:text-sm bg-patilla-bg outline-none font-bold text-gray-800"
+            className="flex-1 sm:flex-none p-2.5 border border-patilla-border rounded-xl text-xs sm:text-sm bg-patilla-bg outline-none font-bold text-gray-800 shadow-2xs"
           >
             <option value="">Todas las sedes</option>
             <option value="1">Sede Centro (#1)</option>
@@ -130,29 +161,26 @@ export default function AdminVentas() {
             onClick={() => cargarVentas(filtroLocal)}
             disabled={loading}
             title="Recargar ventas"
-            className="p-2.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-colors shrink-0"
+            className="p-2.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-colors shrink-0 cursor-pointer"
           >
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
-        <span className="text-xs text-gray-400 font-medium self-end sm:self-center">
-          {ventas.length} cierres registrados
-        </span>
       </div>
 
-      {/* Tabla de Ventas (Scrollable & Responsive) */}
+      {/* Tabla Responsiva de Cierres */}
       <div className="bg-white border border-patilla-border rounded-2xl overflow-hidden shadow-2xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[620px]">
             <thead>
               <tr className="bg-patilla-bg text-[11px] text-gray-500 uppercase tracking-wider">
-                <th className="p-3.5 font-bold">Fecha y Hora</th>
+                <th className="p-3.5 font-bold">Fecha</th>
                 <th className="p-3.5 font-bold">Sede</th>
                 <th className="p-3.5 font-bold">Vendedor</th>
                 <th className="p-3.5 font-bold text-right">Efectivo</th>
                 <th className="p-3.5 font-bold text-right">Transferencia</th>
                 <th className="p-3.5 font-bold text-right">Total Turno</th>
-                <th className="p-3.5 font-bold text-center">Acciones</th>
+                <th className="p-3.5 font-bold text-center">Auditoría</th>
               </tr>
             </thead>
             <tbody className="text-sm">
@@ -167,48 +195,32 @@ export default function AdminVentas() {
                 <tr>
                   <td colSpan="7" className="p-8 text-center text-gray-400">
                     <ReceiptText size={28} className="mx-auto mb-2 text-gray-300" />
-                    No hay reportes de ventas en este periodo.
+                    No hay ventas registradas en este local.
                   </td>
                 </tr>
               ) : (
-                ventas.map((v) => (
+                ventasPaginadas.map((v) => (
                   <tr key={v.id} className="border-b border-patilla-border hover:bg-gray-50 transition-colors">
-                    <td className="p-3.5 text-gray-600">
+                    <td className="p-3.5 text-gray-600 text-xs">
                       <div className="flex items-center gap-1.5">
-                        <Calendar size={14} className="text-gray-400 shrink-0" />
-                        <span className="font-semibold text-xs">
-                          {new Date(v.fecha).toLocaleDateString('es-CO', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
+                        <Calendar size={14} className="text-gray-400" />
+                        <span>{new Date(v.fecha).toLocaleDateString('es-CO')}</span>
                       </div>
                     </td>
-                    <td className="p-3.5 font-bold text-gray-800 text-xs sm:text-sm">
-                      {v.nombreLocal || `Local #${v.localId}`}
-                    </td>
-                    <td className="p-3.5 text-gray-600 text-xs">
-                      {v.nombreVendedor || `Vendedor #${v.vendedorId}`}
-                    </td>
-                    <td className="p-3.5 text-right text-gray-700 text-xs font-semibold">
-                      {formatearDinero(v.totalEfectivo)}
-                    </td>
-                    <td className="p-3.5 text-right text-gray-700 text-xs font-semibold">
-                      {formatearDinero(v.totalTransferencia)}
-                    </td>
+                    <td className="p-3.5 font-bold text-gray-800 text-xs sm:text-sm">{v.nombreLocal}</td>
+                    <td className="p-3.5 text-gray-700 text-xs font-semibold">{v.nombreVendedor}</td>
+                    <td className="p-3.5 text-right font-medium text-gray-700 text-xs">{formatearDinero(v.totalEfectivo)}</td>
+                    <td className="p-3.5 text-right font-medium text-gray-700 text-xs">{formatearDinero(v.totalTransferencia)}</td>
                     <td className="p-3.5 text-right font-black text-gray-900 text-xs sm:text-sm">
                       {formatearDinero(v.totalGeneral)}
                     </td>
                     <td className="p-3.5 text-center">
                       <button
                         onClick={() => handleVerDetalle(v)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-patilla-primary/40 hover:bg-patilla-primary text-gray-900 text-xs font-bold rounded-xl transition-transform active:scale-95 shadow-2xs"
+                        className="p-1.5 sm:px-3 sm:py-1.5 bg-patilla-primary/30 hover:bg-patilla-primary text-gray-900 font-bold text-xs rounded-xl transition-all inline-flex items-center gap-1 active:scale-95 cursor-pointer shadow-2xs"
                       >
-                        <Eye size={13} />
-                        Detalles
+                        <Eye size={14} />
+                        <span className="hidden sm:inline">Ver Detalle</span>
                       </button>
                     </td>
                   </tr>
@@ -217,30 +229,55 @@ export default function AdminVentas() {
             </tbody>
           </table>
         </div>
+
+        {/* Paginación */}
+        {totalPaginas > 1 && (
+          <div className="p-4 border-t border-patilla-border flex items-center justify-between bg-gray-50/70">
+            <button
+              onClick={() => setPaginaActual(prev => Math.max(1, prev - 1))}
+              disabled={paginaActual === 1}
+              className="px-3.5 py-2 text-xs font-bold bg-white border border-patilla-border rounded-xl text-gray-700 disabled:opacity-40 hover:bg-gray-100 flex items-center gap-1.5 active:scale-95 transition-all shadow-2xs cursor-pointer"
+            >
+              <ChevronLeft size={14} /> Anterior
+            </button>
+
+            <span className="text-xs text-gray-600 font-bold">
+              Página {paginaActual} de {totalPaginas}
+            </span>
+
+            <button
+              onClick={() => setPaginaActual(prev => Math.min(totalPaginas, prev + 1))}
+              disabled={paginaActual === totalPaginas}
+              className="px-3.5 py-2 text-xs font-bold bg-white border border-patilla-border rounded-xl text-gray-700 disabled:opacity-40 hover:bg-gray-100 flex items-center gap-1.5 active:scale-95 transition-all shadow-2xs cursor-pointer"
+            >
+              Siguiente <ChevronRight size={14} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* --- MODAL DETALLE DE VENTA --- */}
       {isModalOpen && ventaSeleccionada && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-2xs flex items-center justify-center z-50 p-3 sm:p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
-            <div className="p-4 border-b border-patilla-border flex justify-between items-center bg-gray-50">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-2xs flex items-center justify-center z-[60] p-3 sm:p-4 overscroll-contain animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col border border-patilla-border overscroll-contain">
+            <div className="p-4 sm:p-5 border-b border-patilla-border flex justify-between items-center bg-gray-50 shrink-0">
               <div>
                 <h3 className="font-bold text-gray-800 text-sm sm:text-base flex items-center gap-2">
-                  <ReceiptText size={18} /> Auditoría de Cierre — Reporte #{ventaSeleccionada.id}
+                  <ReceiptText size={18} className="text-patilla-primary" /> Auditoría de Cierre — Reporte #{ventaSeleccionada.id}
                 </h3>
                 <p className="text-[11px] text-gray-500">
-                  {ventaSeleccionada.nombreLocal} • Vendedor: <strong>{ventaSeleccionada.nombreVendedor}</strong> • {new Date(ventaSeleccionada.fecha).toLocaleString('es-CO')}
+                  {ventaSeleccionada.nombreLocal} • Vendedor: <strong>{ventaSeleccionada.nombreVendedor}</strong> • {new Date(ventaSeleccionada.fecha).toLocaleDateString('es-CO')}
                 </p>
               </div>
               <button
                 onClick={() => { setIsModalOpen(false); setVentaSeleccionada(null); }}
-                className="text-gray-400 hover:text-gray-700 p-1 rounded-lg"
+                className="text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 cursor-pointer"
               >
                 <X size={20} />
               </button>
             </div>
 
-            <div className="p-4 sm:p-6 space-y-5 overflow-y-auto">
+            <div className="p-4 sm:p-6 space-y-5 overflow-y-auto overscroll-contain touch-pan-y flex-1">
               {/* Tarjetas Totales Reportados en Caja */}
               <div>
                 <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
@@ -382,11 +419,11 @@ export default function AdminVentas() {
               )}
             </div>
 
-            <div className="p-4 border-t border-patilla-border bg-gray-50 flex justify-end">
+            <div className="p-4 border-t border-patilla-border bg-gray-50 flex justify-end shrink-0">
               <button
                 type="button"
                 onClick={() => { setIsModalOpen(false); setVentaSeleccionada(null); }}
-                className="w-full sm:w-auto px-5 py-2.5 text-xs font-bold bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl transition-colors"
+                className="w-full sm:w-auto px-5 py-2.5 text-xs font-bold bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl transition-colors cursor-pointer"
               >
                 Cerrar
               </button>

@@ -1,9 +1,13 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+// Soporte flexible para URL de API en Cloud (Netlify / producción) o Proxy local
+let rawApiUrl = import.meta.env.VITE_API_URL || '/api';
+if (rawApiUrl && !rawApiUrl.endsWith('/api') && !rawApiUrl.endsWith('/api/')) {
+  rawApiUrl = rawApiUrl.replace(/\/+$/, '') + '/api';
+}
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: rawApiUrl,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -59,6 +63,10 @@ export const comprasService = {
 
 export const pagosService = {
   registrarPago: (data) => api.post('/pagos', data),
+  obtenerHistorial: (localId) => {
+    const params = localId ? { localId } : {};
+    return api.get('/pagos', { params });
+  },
   obtenerPorLocal: (localId) => api.get(`/pagos/local/${localId}`),
   obtenerPorVendedor: (vendedorId) => api.get(`/pagos/vendedor/${vendedorId}`),
 };
@@ -71,6 +79,17 @@ export const ventasService = {
     return api.get('/ventas', { params });
   },
   obtenerDetalle: (id) => api.get(`/ventas/${id}`),
+};
+
+export const productosService = {
+  obtenerTodos: (soloActivos) => {
+    const params = soloActivos !== undefined ? { soloActivos } : {};
+    return api.get('/productos', { params });
+  },
+  obtenerPorId: (id) => api.get(`/productos/${id}`),
+  crear: (data) => api.post('/productos', data),
+  actualizar: (id, data) => api.put(`/productos/${id}`, data),
+  cambiarEstado: (id) => api.patch(`/productos/${id}/toggle`),
 };
 
 export const estadisticasService = {

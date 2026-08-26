@@ -48,17 +48,45 @@ public class PagoEmpleadoService : IPagoEmpleadoService
         {
             Id = pago.Id,
             LocalId = pago.LocalId,
+            NombreLocal = vendedor.Local?.Nombre ?? (localEfectivo > 0 ? $"Sede #{localEfectivo}" : "Sede General"),
             VendedorId = pago.VendedorId,
+            NombreVendedor = vendedor.Nombre,
             Monto = pago.Monto,
             FechaPago = pago.FechaPago,
             Observacion = pago.Observacion
         };
     }
 
+    public async Task<IEnumerable<PagoResumenDto>> ObtenerHistorialPagosAsync(int? localId = null)
+    {
+        IEnumerable<PagoEmpleado> pagos;
+
+        if (localId.HasValue && localId.Value > 0)
+        {
+            pagos = await _pagoRepository.GetByLocalIdAsync(localId.Value);
+        }
+        else
+        {
+            pagos = await _pagoRepository.GetAllAsync();
+        }
+
+        return pagos.Select(p => new PagoResumenDto
+        {
+            Id = p.Id,
+            LocalId = p.LocalId,
+            NombreLocal = p.Local?.Nombre ?? $"Sede #{p.LocalId}",
+            VendedorId = p.VendedorId,
+            NombreVendedor = p.Vendedor?.Nombre ?? $"Colaborador #{p.VendedorId}",
+            Monto = p.Monto,
+            FechaPago = p.FechaPago,
+            Observacion = p.Observacion
+        });
+    }
+
     public async Task<IEnumerable<PagoResumenDto>> ObtenerPagosPorVendedorAsync(int vendedorId)
     {
         var desde = DateTime.UtcNow.AddMonths(-1);
-        var hasta = DateTime.UtcNow;
+        var hasta = DateTime.UtcNow.AddDays(1);
 
         var pagos = await _pagoRepository.GetAllByDateRangeAsync(desde, hasta);
         
@@ -68,7 +96,9 @@ public class PagoEmpleadoService : IPagoEmpleadoService
             {
                 Id = p.Id,
                 LocalId = p.LocalId,
+                NombreLocal = p.Local?.Nombre ?? $"Sede #{p.LocalId}",
                 VendedorId = p.VendedorId,
+                NombreVendedor = p.Vendedor?.Nombre ?? $"Colaborador #{p.VendedorId}",
                 Monto = p.Monto,
                 FechaPago = p.FechaPago,
                 Observacion = p.Observacion
@@ -83,7 +113,9 @@ public class PagoEmpleadoService : IPagoEmpleadoService
         {
             Id = p.Id,
             LocalId = p.LocalId,
+            NombreLocal = p.Local?.Nombre ?? $"Sede #{p.LocalId}",
             VendedorId = p.VendedorId,
+            NombreVendedor = p.Vendedor?.Nombre ?? $"Colaborador #{p.VendedorId}",
             Monto = p.Monto,
             FechaPago = p.FechaPago,
             Observacion = p.Observacion

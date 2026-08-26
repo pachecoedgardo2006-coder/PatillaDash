@@ -5,6 +5,7 @@ namespace PatillaDash.Application.Interfaces;
 public interface IPagoEmpleadoService
 {
     Task<PagoResumenDto> RegistrarPagoAsync(RegistrarPagoDto dto);
+    Task<IEnumerable<PagoResumenDto>> ObtenerHistorialPagosAsync(int? localId = null);
     Task<IEnumerable<PagoResumenDto>> ObtenerPagosPorVendedorAsync(int vendedorId);
     Task<IEnumerable<PagoResumenDto>> ObtenerPagosPorLocalAsync(int localId);
 }

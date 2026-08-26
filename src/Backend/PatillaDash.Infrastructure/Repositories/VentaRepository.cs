@@ -23,6 +23,7 @@ public class VentaRepository : IVentaRepository
     public async Task<RegistroVentaDiaria?> GetByIdAsync(int id)
     {
         return await _context.Ventas
+            .AsNoTracking()
             .Include(v => v.Local)
             .Include(v => v.Vendedor)
             .Include(v => v.Detalles)
@@ -35,6 +36,7 @@ public class VentaRepository : IVentaRepository
     public async Task<IEnumerable<RegistroVentaDiaria>> GetByLocalAndDateRangeAsync(int localId, DateTime desde, DateTime hasta)
     {
         return await _context.Ventas
+            .AsNoTracking()
             .Include(v => v.Local)
             .Include(v => v.Vendedor)
             .Include(v => v.Detalles)
@@ -49,6 +51,7 @@ public class VentaRepository : IVentaRepository
     public async Task<IEnumerable<RegistroVentaDiaria>> GetAllByDateRangeAsync(DateTime desde, DateTime hasta)
     {
         return await _context.Ventas
+            .AsNoTracking()
             .Include(v => v.Local)
             .Include(v => v.Vendedor)
             .Include(v => v.Detalles)

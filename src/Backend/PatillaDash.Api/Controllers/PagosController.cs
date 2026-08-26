@@ -26,6 +26,14 @@ public class PagosController : ControllerBase
         return Ok(pago);
     }
 
+    [HttpGet]
+    [ProducesResponseType(typeof(IEnumerable<PagoResumenDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ObtenerHistorialPagos([FromQuery] int? localId)
+    {
+        var pagos = await _pagoEmpleadoService.ObtenerHistorialPagosAsync(localId);
+        return Ok(pagos);
+    }
+
     [HttpGet("vendedor/{vendedorId:int}")]
     [ProducesResponseType(typeof(IEnumerable<PagoResumenDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> ObtenerPagosPorVendedor([FromRoute] int vendedorId)

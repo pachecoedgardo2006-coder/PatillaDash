@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -6,12 +6,12 @@ import {
   TrendingUp, 
   Package, 
   ShoppingCart, 
-  Users,
-  ReceiptText,
-  Menu,
-  X,
-  Store,
-  ChevronRight
+  Users, 
+  ReceiptText, 
+  Menu, 
+  X, 
+  ChevronRight,
+  ShoppingBag
 } from 'lucide-react';
 
 export default function AdminLayout({ children, title, subtitle, actionButton }) {
@@ -19,43 +19,56 @@ export default function AdminLayout({ children, title, subtitle, actionButton })
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Bloqueo de scroll cuando el menú lateral móvil está abierto
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [mobileMenuOpen]);
+
   const navItems = [
     { path: '/admin', label: 'Dashboard', icon: TrendingUp, shortLabel: 'Inicio' },
     { path: '/admin/ventas', label: 'Ventas y Cierres', icon: ReceiptText, shortLabel: 'Ventas' },
+    { path: '/admin/productos', label: 'Productos y Precios', icon: ShoppingBag, shortLabel: 'Precios' },
     { path: '/admin/inventario', label: 'Inventario General', icon: Package, shortLabel: 'Inventario' },
     { path: '/admin/compras', label: 'Compras y Entradas', icon: ShoppingCart, shortLabel: 'Compras' },
     { path: '/admin/pagos', label: 'Personal y Pagos', icon: Users, shortLabel: 'Personal' },
   ];
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-patilla-bg text-gray-800">
+    <div className="min-h-screen md:h-screen md:overflow-hidden flex flex-col md:flex-row bg-patilla-bg text-gray-800">
       {/* Mobile Top Header */}
-      <header className="md:hidden bg-white border-b border-patilla-border px-4 py-3 sticky top-0 z-30 flex items-center justify-between shadow-2xs">
+      <header className="md:hidden bg-white border-b border-patilla-border px-4 py-3 sticky top-0 z-30 flex items-center justify-between shadow-2xs shrink-0">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Abrir menú de navegación"
-            className="p-2 -ml-1 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors active:scale-95"
+            className="p-2 -ml-1 text-gray-700 hover:bg-gray-100 rounded-xl transition-colors active:scale-95 cursor-pointer"
           >
             {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
           <div className="flex items-center gap-1.5">
             <span className="text-xl">🍉</span>
-            <span className="font-extrabold text-gray-800 text-base tracking-tight">PatillaDash</span>
-            <span className="text-[10px] bg-red-100 text-red-800 font-bold px-1.5 py-0.5 rounded border border-red-200">Admin</span>
+            <span className="font-black text-gray-800 text-base tracking-tight">PatillaDash</span>
+            <span className="text-[10px] bg-red-600 text-white font-extrabold px-2 py-0.5 rounded-full shadow-2xs uppercase tracking-wider">
+              Admin
+            </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-gray-600 truncate max-w-[110px]">
-            {user?.nombre?.split(' ')[0] || 'Admin'}
-          </span>
+        <div className="flex items-center gap-1.5">
           <button 
-            onClick={logout}
+            onClick={logout} 
             title="Cerrar sesión"
-            className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            aria-label="Cerrar sesión"
+            className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors active:scale-95 cursor-pointer"
           >
-            <LogOut size={17} />
+            <LogOut size={18} />
           </button>
         </div>
       </header>
@@ -63,19 +76,19 @@ export default function AdminLayout({ children, title, subtitle, actionButton })
       {/* Mobile Drawer Overlay */}
       {mobileMenuOpen && (
         <div 
-          className="md:hidden fixed inset-0 bg-black/40 z-40 backdrop-blur-2xs animate-fade-in"
+          className="md:hidden fixed inset-0 bg-black/40 z-40 backdrop-blur-2xs animate-fade-in overscroll-contain"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
       {/* Sidebar Desktop & Mobile Slide-out Drawer */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-patilla-border flex flex-col transition-transform duration-300 ease-in-out
-        md:static md:translate-x-0 md:w-64 md:z-0 md:shrink-0
+        fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-patilla-border flex flex-col transition-transform duration-300 ease-in-out overscroll-contain
+        md:relative md:h-full md:w-64 md:translate-x-0 md:z-20 md:shrink-0
         ${mobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}
       `}>
         {/* Brand Header */}
-        <div className="p-5 border-b border-patilla-border flex items-center justify-between">
+        <div className="p-5 border-b border-patilla-border flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <span className="text-2xl">🍉</span>
             <div>
@@ -85,14 +98,14 @@ export default function AdminLayout({ children, title, subtitle, actionButton })
           </div>
           <button 
             onClick={() => setMobileMenuOpen(false)}
-            className="md:hidden p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="md:hidden p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Navigation Links */}
-        <nav className="flex-1 p-3.5 space-y-1.5 overflow-y-auto">
+        <nav className="flex-1 p-3.5 space-y-1.5 overflow-y-auto overscroll-contain touch-pan-y">
           <div className="px-3 py-1.5 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
             Módulos Principales
           </div>
@@ -120,8 +133,8 @@ export default function AdminLayout({ children, title, subtitle, actionButton })
           })}
         </nav>
 
-        {/* User Footer */}
-        <div className="p-4 border-t border-patilla-border bg-gray-50/70">
+        {/* User Footer Fijo al Fondo en Desktop & Drawer */}
+        <div className="p-3.5 border-t border-patilla-border bg-gray-50/80 shrink-0">
           <div className="flex items-center justify-between gap-2">
             <div className="overflow-hidden min-w-0">
               <span className="block text-xs font-bold text-gray-800 truncate">
@@ -134,16 +147,17 @@ export default function AdminLayout({ children, title, subtitle, actionButton })
             <button 
               onClick={logout} 
               title="Cerrar sesión"
-              className="p-2 bg-white hover:bg-red-50 text-gray-600 hover:text-red-600 rounded-lg border border-patilla-border transition-colors shrink-0 shadow-2xs"
+              className="px-2.5 py-1.5 bg-white hover:bg-red-50 text-gray-600 hover:text-red-600 rounded-xl border border-patilla-border transition-all shrink-0 shadow-2xs cursor-pointer flex items-center gap-1.5 active:scale-95"
             >
               <LogOut size={16} />
+              <span className="text-xs font-bold hidden sm:inline">Salir</span>
             </button>
           </div>
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 p-4 sm:p-6 lg:p-10 overflow-y-auto pb-24 md:pb-10">
+      {/* Main Content Area con Scroll Independiente */}
+      <main className="flex-1 p-4 sm:p-6 lg:p-10 overflow-y-auto pb-24 md:pb-10 h-full">
         {(title || actionButton) && (
           <header className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
@@ -156,8 +170,8 @@ export default function AdminLayout({ children, title, subtitle, actionButton })
         {children}
       </main>
 
-      {/* Bottom Mobile Navigation Bar for High-Speed Switching */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-patilla-border z-30 px-2 py-1.5 flex justify-around shadow-lg">
+      {/* Bottom Mobile Navigation Bar with GPU isolation */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-patilla-border z-30 px-2 py-1.5 flex justify-around shadow-lg transform-gpu">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
@@ -165,14 +179,14 @@ export default function AdminLayout({ children, title, subtitle, actionButton })
             <Link
               key={item.path}
               to={item.path}
-              className={`flex flex-col items-center justify-center py-1 px-2 rounded-lg text-[10px] font-semibold transition-colors min-w-[56px] ${
+              className={`flex flex-col items-center justify-center py-1 px-2 rounded-lg text-[10px] font-semibold transition-colors min-w-[50px] ${
                 isActive
                   ? 'text-gray-900 font-black'
                   : 'text-gray-400 hover:text-gray-600'
               }`}
             >
               <div className={`p-1 rounded-lg ${isActive ? 'bg-patilla-primary/40' : ''}`}>
-                <Icon size={18} className={isActive ? 'text-gray-900' : 'text-gray-400'} />
+                <Icon size={17} className={isActive ? 'text-gray-900' : 'text-gray-400'} />
               </div>
               <span className="mt-0.5 leading-none">{item.shortLabel}</span>
             </Link>
