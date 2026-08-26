@@ -13,6 +13,7 @@ using Scalar.AspNetCore;
 // Optimización crítica para contenedores Linux / Render (Evita error IOException: inotify instances limit alcanzado)
 Environment.SetEnvironmentVariable("DOTNET_USE_POLLING_FILE_WATCHER", "true");
 Environment.SetEnvironmentVariable("DOTNET_EnableDiagnostics", "0");
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -123,9 +124,10 @@ using (var scope = app.Services.CreateScope())
 // Pipeline de manejo de errores
 app.UseExceptionHandler();
 
-// Endpoint de Health Check para Render / Uptime monitors
-app.MapGet("/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow, app = "PatillaDash API" }));
-app.MapGet("/api/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow, app = "PatillaDash API" }));
+// Endpoint de Health Check para Render / Uptime monitors (Soporta GET y HEAD)
+var healthMethods = new[] { "GET", "HEAD" };
+app.MapMethods("/health", healthMethods, () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow, app = "PatillaDash API" }));
+app.MapMethods("/api/health", healthMethods, () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow, app = "PatillaDash API" }));
 
 // Documentación de API interactiva (Scalar)
 var enableDocs = app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("EnableOpenApi");
