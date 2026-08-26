@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Páginas Públicas
 import Login from './pages/Login';
@@ -18,81 +19,83 @@ import AdminProductos from './pages/AdminProductos';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Ruta Pública */}
-          <Route path="/login" element={<Login />} />
-          
-          {/* Rutas de Vendedor */}
-          <Route
-            path="/vendedor"
-            element={
-              <ProtectedRoute allowedRoles={['Vendedor']}>
-                <VendedorDashboard />
-              </ProtectedRoute>
-            }
-          />
+    <ErrorBoundary>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Ruta Pública */}
+            <Route path="/login" element={<Login />} />
+            
+            {/* Rutas de Vendedor */}
+            <Route
+              path="/vendedor"
+              element={
+                <ProtectedRoute allowedRoles={['Vendedor']}>
+                  <VendedorDashboard />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Rutas de Administrador */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute allowedRoles={['Administrador']}>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
+            {/* Rutas de Administrador */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute allowedRoles={['Administrador']}>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/admin/ventas"
-            element={
-              <ProtectedRoute allowedRoles={['Administrador']}>
-                <AdminVentas />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/admin/ventas"
+              element={
+                <ProtectedRoute allowedRoles={['Administrador']}>
+                  <AdminVentas />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/admin/productos"
-            element={
-              <ProtectedRoute allowedRoles={['Administrador']}>
-                <AdminProductos />
-              </ProtectedRoute>
-            }
-          />
-          
-          <Route
-            path="/admin/inventario"
-            element={
-              <ProtectedRoute allowedRoles={['Administrador']}>
-                <AdminInventario />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/admin/productos"
+              element={
+                <ProtectedRoute allowedRoles={['Administrador']}>
+                  <AdminProductos />
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/admin/inventario"
+              element={
+                <ProtectedRoute allowedRoles={['Administrador']}>
+                  <AdminInventario />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/admin/compras"
-            element={
-              <ProtectedRoute allowedRoles={['Administrador']}>
-                <AdminCompras />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/admin/compras"
+              element={
+                <ProtectedRoute allowedRoles={['Administrador']}>
+                  <AdminCompras />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/admin/pagos"
-            element={
-              <ProtectedRoute allowedRoles={['Administrador']}>
-                <AdminPagos />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/admin/pagos"
+              element={
+                <ProtectedRoute allowedRoles={['Administrador']}>
+                  <AdminPagos />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Ruta por defecto */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+            {/* Ruta por defecto */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

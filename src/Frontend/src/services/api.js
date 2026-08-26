@@ -26,10 +26,17 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Si el error viene de un intento de login (/auth/login), NO redirigir ni recargar,
+    // permitir que la página de Login muestre el mensaje de error normal
+    if (error.config?.url?.includes('/auth/login')) {
+      return Promise.reject(error);
+    }
+
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      if (window.location.pathname !== '/login') {
+      const pathname = window.location.pathname;
+      if (pathname !== '/login' && pathname !== '/login/') {
         window.location.href = '/login';
       }
     }
@@ -63,33 +70,18 @@ export const comprasService = {
 
 export const pagosService = {
   registrarPago: (data) => api.post('/pagos', data),
-  obtenerHistorial: (localId) => {
-    const params = localId ? { localId } : {};
-    return api.get('/pagos', { params });
-  },
   obtenerPorLocal: (localId) => api.get(`/pagos/local/${localId}`),
   obtenerPorVendedor: (vendedorId) => api.get(`/pagos/vendedor/${vendedorId}`),
 };
 
 export const ventasService = {
   registrarVentaDiaria: (data) => api.post('/ventas/diaria', data),
-  obtenerPorLocal: (localId) => api.get(`/ventas/local/${localId}`),
   obtenerHistorial: (localId) => {
     const params = localId ? { localId } : {};
     return api.get('/ventas', { params });
   },
   obtenerDetalle: (id) => api.get(`/ventas/${id}`),
-};
-
-export const productosService = {
-  obtenerTodos: (soloActivos) => {
-    const params = soloActivos !== undefined ? { soloActivos } : {};
-    return api.get('/productos', { params });
-  },
-  obtenerPorId: (id) => api.get(`/productos/${id}`),
-  crear: (data) => api.post('/productos', data),
-  actualizar: (id, data) => api.put(`/productos/${id}`, data),
-  cambiarEstado: (id) => api.patch(`/productos/${id}/toggle`),
+  obtenerPorLocal: (localId) => api.get(`/ventas/local/${localId}`),
 };
 
 export const estadisticasService = {
@@ -99,6 +91,17 @@ export const estadisticasService = {
     if (fechaFin) params.fechaFin = fechaFin;
     return api.get('/estadisticas/dashboard', { params });
   },
+};
+
+export const productosService = {
+  obtenerTodos: (incluirInactivos = false) => {
+    const params = incluirInactivos ? { incluirInactivos: true } : {};
+    return api.get('/productos', { params });
+  },
+  obtenerPorId: (id) => api.get(`/productos/${id}`),
+  crear: (data) => api.post('/productos', data),
+  actualizar: (id, data) => api.put(`/productos/${id}`, data),
+  desactivar: (id) => api.delete(`/productos/${id}`),
 };
 
 export default api;
