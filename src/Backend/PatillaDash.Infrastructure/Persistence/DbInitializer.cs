@@ -13,15 +13,60 @@ public static class DbInitializer
 {
     public static async Task SeedAsync(PatillaDbContext context, IPasswordHasher passwordHasher)
     {
-        // 0. Asegurar creación de tablas tanto en SQLite (local) como en PostgreSQL (Supabase / Render)
+        // 0. En PostgreSQL / Supabase, si las tablas se crearon previamente con tipos antiguos de SQLite (integer para bool),
+        // realizamos una limpieza previa segura del esquema para que las migraciones creen los tipos nativos correctos (boolean, numeric, timestamp).
+        if (context.Database.IsNpgsql())
+        {
+            try
+            {
+                var conn = context.Database.GetDbConnection();
+                if (conn.State != System.Data.ConnectionState.Open)
+                {
+                    await conn.OpenAsync();
+                }
+
+                using var checkCmd = conn.CreateCommand();
+                checkCmd.CommandText = @"
+                    SELECT data_type 
+                    FROM information_schema.columns 
+                    WHERE table_schema = 'public' 
+                      AND table_name = 'Locales' 
+                      AND column_name = 'Activo'
+                    LIMIT 1;";
+                var dataType = await checkCmd.ExecuteScalarAsync();
+
+                if (dataType != null && dataType.ToString()?.Equals("integer", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    // Limpieza preventiva de tablas con tipos legacy
+                    using var dropCmd = conn.CreateCommand();
+                    dropCmd.CommandText = @"
+                        DROP TABLE IF EXISTS ""ConsumosSuministroDiario"" CASCADE;
+                        DROP TABLE IF EXISTS ""DetallesVentaDiaria"" CASCADE;
+                        DROP TABLE IF EXISTS ""InventariosLocal"" CASCADE;
+                        DROP TABLE IF EXISTS ""PagosEmpleado"" CASCADE;
+                        DROP TABLE IF EXISTS ""ComprasInsumo"" CASCADE;
+                        DROP TABLE IF EXISTS ""RegistrosVentaDiaria"" CASCADE;
+                        DROP TABLE IF EXISTS ""Usuarios"" CASCADE;
+                        DROP TABLE IF EXISTS ""Productos"" CASCADE;
+                        DROP TABLE IF EXISTS ""Suministros"" CASCADE;
+                        DROP TABLE IF EXISTS ""Locales"" CASCADE;
+                        DROP TABLE IF EXISTS ""__EFMigrationsHistory"" CASCADE;";
+                    await dropCmd.ExecuteNonQueryAsync();
+                }
+            }
+            catch
+            {
+                // Silencioso si la conexión o tablas no existen aún
+            }
+        }
+
+        // 1. Ejecutar migraciones con tipos nativos tanto en SQLite (local) como en PostgreSQL (Supabase / Render)
         try
         {
             await context.Database.MigrateAsync();
         }
         catch
         {
-            // En Supabase, si la base de datos postgres ya existe previamente pero sin las tablas de la app,
-            // forzamos la creación directa de las tablas del modelo
             try
             {
                 var databaseCreator = (RelationalDatabaseCreator)context.Database.GetService<IDatabaseCreator>();
@@ -29,11 +74,11 @@ public static class DbInitializer
             }
             catch
             {
-                // Si las tablas ya existían, continuar transparentemente a la siembra
+                // Si las tablas de PatillaDash ya existen, continuar a la siembra
             }
         }
 
-        // 1. Sembrar Locales Reales (Puntos de Venta)
+        // 2. Sembrar Locales Reales (Puntos de Venta)
         if (!await context.Locales.AnyAsync())
         {
             var punto30 = new Local("Punto de la 30", "Calle 30");
@@ -43,7 +88,7 @@ public static class DbInitializer
             await context.SaveChangesAsync();
         }
 
-        // 2. Sembrar Insumos / Suministros Reales
+        // 3. Sembrar Insumos / Suministros Reales
         if (!await context.Suministros.AnyAsync())
         {
             var suministros = new List<Suministro>
@@ -67,7 +112,7 @@ public static class DbInitializer
             await context.SaveChangesAsync();
         }
 
-        // 3. Sembrar Inventario Base por Local
+        // 4. Sembrar Inventario Base por Local
         if (!await context.Inventarios.AnyAsync())
         {
             var locales = await context.Locales.ToListAsync();
@@ -104,7 +149,7 @@ public static class DbInitializer
             await context.SaveChangesAsync();
         }
 
-        // 4. Sembrar Productos de Venta Reales y Precios Exactos
+        // 5. Sembrar Productos de Venta Reales y Precios Exactos
         if (!await context.Productos.AnyAsync())
         {
             var productos = new List<Producto>
@@ -121,7 +166,7 @@ public static class DbInitializer
             await context.SaveChangesAsync();
         }
 
-        // 5. Sembrar Usuarios (Admin y Vendedoras Reales)
+        // 6. Sembrar Usuarios (Admin y Vendedoras Reales)
         if (!await context.Usuarios.AnyAsync())
         {
             var punto30 = await context.Locales.FirstOrDefaultAsync(l => l.Nombre == "Punto de la 30");

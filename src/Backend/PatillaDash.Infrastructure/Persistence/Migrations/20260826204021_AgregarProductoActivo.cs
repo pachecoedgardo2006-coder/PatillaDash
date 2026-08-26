@@ -13,7 +13,6 @@ namespace PatillaDash.Infrastructure.Persistence.Migrations
             migrationBuilder.AddColumn<bool>(
                 name: "Activo",
                 table: "Productos",
-                type: "INTEGER",
                 nullable: false,
                 defaultValue: true);
         }

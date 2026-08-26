@@ -15,11 +15,11 @@ namespace PatillaDash.Infrastructure.Persistence.Migrations
                 name: "Locales",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table.Column<int>(nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    Nombre = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    Direccion = table.Column<string>(type: "TEXT", maxLength: 250, nullable: false),
-                    Activo = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Nombre = table.Column<string>(maxLength: 100, nullable: false),
+                    Direccion = table.Column<string>(maxLength: 250, nullable: false),
+                    Activo = table.Column<bool>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -30,11 +30,11 @@ namespace PatillaDash.Infrastructure.Persistence.Migrations
                 name: "Productos",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table.Column<int>(nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    Nombre = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    PrecioBase = table.Column<decimal>(type: "TEXT", precision: 18, scale: 2, nullable: false),
-                    Categoria = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false)
+                    Nombre = table.Column<string>(maxLength: 100, nullable: false),
+                    PrecioBase = table.Column<decimal>(precision: 18, scale: 2, nullable: false),
+                    Categoria = table.Column<string>(maxLength: 100, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -45,11 +45,11 @@ namespace PatillaDash.Infrastructure.Persistence.Migrations
                 name: "Suministros",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table.Column<int>(nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    Nombre = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    UnidadMedida = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    StockMinimoAlerta = table.Column<decimal>(type: "TEXT", precision: 18, scale: 2, nullable: false)
+                    Nombre = table.Column<string>(maxLength: 100, nullable: false),
+                    UnidadMedida = table.Column<string>(maxLength: 50, nullable: false),
+                    StockMinimoAlerta = table.Column<decimal>(precision: 18, scale: 2, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -60,13 +60,13 @@ namespace PatillaDash.Infrastructure.Persistence.Migrations
                 name: "Usuarios",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table.Column<int>(nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    Nombre = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
-                    Email = table.Column<string>(type: "TEXT", maxLength: 150, nullable: false),
-                    PasswordHash = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
-                    Rol = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    LocalId = table.Column<int>(type: "INTEGER", nullable: true)
+                    Nombre = table.Column<string>(maxLength: 100, nullable: false),
+                    Email = table.Column<string>(maxLength: 150, nullable: false),
+                    PasswordHash = table.Column<string>(maxLength: 256, nullable: false),
+                    Rol = table.Column<string>(maxLength: 50, nullable: false),
+                    LocalId = table.Column<int>(nullable: true)
                 },
                 constraints: table =>
                 {
@@ -83,14 +83,14 @@ namespace PatillaDash.Infrastructure.Persistence.Migrations
                 name: "ComprasInsumo",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table.Column<int>(nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    LocalId = table.Column<int>(type: "INTEGER", nullable: false),
-                    SuministroId = table.Column<int>(type: "INTEGER", nullable: false),
-                    Cantidad = table.Column<decimal>(type: "TEXT", precision: 18, scale: 2, nullable: false),
-                    CostoTotal = table.Column<decimal>(type: "TEXT", precision: 18, scale: 2, nullable: false),
-                    Fecha = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Proveedor = table.Column<string>(type: "TEXT", maxLength: 150, nullable: false)
+                    LocalId = table.Column<int>(nullable: false),
+                    SuministroId = table.Column<int>(nullable: false),
+                    Cantidad = table.Column<decimal>(precision: 18, scale: 2, nullable: false),
+                    CostoTotal = table.Column<decimal>(precision: 18, scale: 2, nullable: false),
+                    Fecha = table.Column<DateTime>(nullable: false),
+                    Proveedor = table.Column<string>(maxLength: 150, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -113,11 +113,11 @@ namespace PatillaDash.Infrastructure.Persistence.Migrations
                 name: "InventariosLocal",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table.Column<int>(nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    LocalId = table.Column<int>(type: "INTEGER", nullable: false),
-                    SuministroId = table.Column<int>(type: "INTEGER", nullable: false),
-                    CantidadDisponible = table.Column<decimal>(type: "TEXT", precision: 18, scale: 2, nullable: false)
+                    LocalId = table.Column<int>(nullable: false),
+                    SuministroId = table.Column<int>(nullable: false),
+                    CantidadDisponible = table.Column<decimal>(precision: 18, scale: 2, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -140,13 +140,13 @@ namespace PatillaDash.Infrastructure.Persistence.Migrations
                 name: "PagosEmpleado",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table.Column<int>(nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    LocalId = table.Column<int>(type: "INTEGER", nullable: false),
-                    VendedorId = table.Column<int>(type: "INTEGER", nullable: false),
-                    Monto = table.Column<decimal>(type: "TEXT", precision: 18, scale: 2, nullable: false),
-                    FechaPago = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    Observacion = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true)
+                    LocalId = table.Column<int>(nullable: false),
+                    VendedorId = table.Column<int>(nullable: false),
+                    Monto = table.Column<decimal>(precision: 18, scale: 2, nullable: false),
+                    FechaPago = table.Column<DateTime>(nullable: false),
+                    Observacion = table.Column<string>(maxLength: 500, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -169,14 +169,14 @@ namespace PatillaDash.Infrastructure.Persistence.Migrations
                 name: "RegistrosVentaDiaria",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table.Column<int>(nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    LocalId = table.Column<int>(type: "INTEGER", nullable: false),
-                    VendedorId = table.Column<int>(type: "INTEGER", nullable: false),
-                    Fecha = table.Column<DateTime>(type: "TEXT", nullable: false),
-                    TotalEfectivo = table.Column<decimal>(type: "TEXT", precision: 18, scale: 2, nullable: false),
-                    TotalTransferencia = table.Column<decimal>(type: "TEXT", precision: 18, scale: 2, nullable: false),
-                    Notas = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true)
+                    LocalId = table.Column<int>(nullable: false),
+                    VendedorId = table.Column<int>(nullable: false),
+                    Fecha = table.Column<DateTime>(nullable: false),
+                    TotalEfectivo = table.Column<decimal>(precision: 18, scale: 2, nullable: false),
+                    TotalTransferencia = table.Column<decimal>(precision: 18, scale: 2, nullable: false),
+                    Notas = table.Column<string>(maxLength: 500, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -199,11 +199,11 @@ namespace PatillaDash.Infrastructure.Persistence.Migrations
                 name: "ConsumosSuministroDiario",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table.Column<int>(nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    RegistroVentaDiariaId = table.Column<int>(type: "INTEGER", nullable: false),
-                    SuministroId = table.Column<int>(type: "INTEGER", nullable: false),
-                    CantidadGastada = table.Column<decimal>(type: "TEXT", precision: 18, scale: 2, nullable: false)
+                    RegistroVentaDiariaId = table.Column<int>(nullable: false),
+                    SuministroId = table.Column<int>(nullable: false),
+                    CantidadGastada = table.Column<decimal>(precision: 18, scale: 2, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -226,12 +226,12 @@ namespace PatillaDash.Infrastructure.Persistence.Migrations
                 name: "DetallesVentaDiaria",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table.Column<int>(nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    RegistroVentaDiariaId = table.Column<int>(type: "INTEGER", nullable: false),
-                    ProductoId = table.Column<int>(type: "INTEGER", nullable: false),
-                    CantidadVendida = table.Column<int>(type: "INTEGER", nullable: false),
-                    Subtotal = table.Column<decimal>(type: "TEXT", precision: 18, scale: 2, nullable: false)
+                    RegistroVentaDiariaId = table.Column<int>(nullable: false),
+                    ProductoId = table.Column<int>(nullable: false),
+                    CantidadVendida = table.Column<int>(nullable: false),
+                    Subtotal = table.Column<decimal>(precision: 18, scale: 2, nullable: false)
                 },
                 constraints: table =>
                 {
