@@ -366,52 +366,56 @@ export default function AdminPagos() {
                 return (
                   <div 
                     key={colaborador.id} 
-                    className="bg-white border border-patilla-border rounded-2xl p-5 shadow-2xs hover:shadow-sm transition-all flex flex-col justify-between"
+                    className="bg-white border border-patilla-border rounded-2xl p-5 shadow-2xs hover:shadow-sm transition-all flex flex-col justify-between min-w-0"
                   >
                     <div>
-                      {/* Cabecera del colaborador */}
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm text-white shadow-xs ${
-                            esAdmin ? 'bg-indigo-600' : 'bg-patilla-dark'
-                          }`}>
-                            {colaborador.nombre.substring(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <h4 className="font-extrabold text-gray-900 text-sm leading-snug">
-                              {colaborador.nombre}
-                            </h4>
-                            <span className="text-[11px] font-bold text-gray-400 flex items-center gap-1 mt-0.5">
-                              <Mail size={12} /> {colaborador.email}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Badge de Rol */}
-                        <span className={`text-[10px] uppercase tracking-wider font-black px-2.5 py-1 rounded-lg shrink-0 ${
-                          esAdmin 
-                            ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' 
-                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      {/* Cabecera del colaborador con avatar y nombre */}
+                      <div className="flex items-center gap-3 mb-3.5">
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm text-white shrink-0 shadow-xs ${
+                          esAdmin ? 'bg-indigo-600' : 'bg-patilla-dark'
                         }`}>
-                          {colaborador.rol}
-                        </span>
+                          {colaborador.nombre.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-extrabold text-gray-900 text-sm truncate" title={colaborador.nombre}>
+                            {colaborador.nombre}
+                          </h4>
+                          <span className="text-[11px] font-medium text-gray-400 flex items-center gap-1 mt-0.5 truncate" title={colaborador.email}>
+                            <Mail size={12} className="shrink-0 text-gray-400" />
+                            <span className="truncate">{colaborador.email}</span>
+                          </span>
+                        </div>
                       </div>
 
-                      {/* Detalles: Sede y Métricas */}
-                      <div className="bg-patilla-bg/60 rounded-xl p-3 mb-4 space-y-1.5 border border-patilla-border/60">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-gray-500 font-bold flex items-center gap-1">
-                            <MapPin size={13} className="text-gray-400" /> Sede Asignada:
+                      {/* Detalles organizados: Rol, Sede y Total Pagado */}
+                      <div className="bg-patilla-bg/70 rounded-xl p-3 mb-4 space-y-2 border border-patilla-border/60 text-xs">
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="text-gray-500 font-bold flex items-center gap-1.5 shrink-0">
+                            <Shield size={13} className="text-gray-400 shrink-0" /> Rol:
                           </span>
-                          <span className="font-extrabold text-gray-800">
+                          <span className={`text-[10px] uppercase tracking-wider font-black px-2.5 py-0.5 rounded-md shrink-0 ${
+                            esAdmin 
+                              ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' 
+                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          }`}>
+                            {colaborador.rol}
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="text-gray-500 font-bold flex items-center gap-1.5 shrink-0">
+                            <MapPin size={13} className="text-gray-400 shrink-0" /> Sede:
+                          </span>
+                          <span className="font-extrabold text-gray-800 truncate text-right max-w-[170px]" title={colaborador.nombreLocal}>
                             {colaborador.nombreLocal || (colaborador.localId ? `Sede #${colaborador.localId}` : 'Sede General')}
                           </span>
                         </div>
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-gray-500 font-bold flex items-center gap-1">
-                            <DollarSign size={13} className="text-gray-400" /> Nómina acumulada:
+
+                        <div className="flex justify-between items-center gap-2 border-t border-patilla-border/40 pt-2">
+                          <span className="text-gray-500 font-bold flex items-center gap-1.5 shrink-0">
+                            <DollarSign size={13} className="text-gray-400 shrink-0" /> Total Pagado:
                           </span>
-                          <span className="font-black text-emerald-700">
+                          <span className="font-black text-emerald-700 text-sm shrink-0">
                             {formatearDinero(totalCobrado)}
                           </span>
                         </div>
@@ -421,7 +425,7 @@ export default function AdminPagos() {
                     {/* Botón de Acción Directa */}
                     <button
                       onClick={() => abrirModalPagoPara(colaborador)}
-                      className="w-full py-2 px-3 bg-patilla-primary/20 hover:bg-patilla-primary text-gray-900 border border-patilla-primary text-xs font-black rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                      className="w-full py-2.5 px-3 bg-patilla-primary/20 hover:bg-patilla-primary text-gray-900 border border-patilla-primary text-xs font-black rounded-xl transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
                     >
                       <DollarSign size={14} className="text-gray-800" />
                       Registrar Pago a {colaborador.nombre.split(' ')[0]}
