@@ -92,6 +92,10 @@ export const ventasService = {
     const params = localId ? { localId } : {};
     return api.get('/ventas', { params });
   },
+  obtenerTodas: (localId) => {
+    const params = localId ? { localId } : {};
+    return api.get('/ventas', { params });
+  },
   obtenerDetalle: (id) => api.get(`/ventas/${id}`),
   obtenerPorLocal: (localId) => api.get(`/ventas/local/${localId}`),
 };

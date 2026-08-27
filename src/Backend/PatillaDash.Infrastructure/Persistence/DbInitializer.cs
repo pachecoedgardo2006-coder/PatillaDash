@@ -176,44 +176,46 @@ public static class DbInitializer
             await context.SaveChangesAsync();
         }
 
-        // 6. Sembrar Usuarios Iniciales (Admin y Vendedores Demo)
-        if (!await context.Usuarios.AnyAsync())
+        // 6. Sembrar o Sincronizar Usuarios (Admin y Vendedoras Reales)
+        var local30 = await context.Locales.FirstOrDefaultAsync(l => l.Nombre == "Punto de la 30") ?? await context.Locales.FirstOrDefaultAsync();
+        var local27 = await context.Locales.FirstOrDefaultAsync(l => l.Nombre == "Punto de la 27") ?? await context.Locales.OrderByDescending(l => l.Id).FirstOrDefaultAsync();
+
+        var adminHash = passwordHasher.HashPassword("Admin123!");
+        var vendedorHash = passwordHasher.HashPassword("Vendedor123!");
+
+        var admin = await context.Usuarios.FirstOrDefaultAsync(u => u.Email == "admin@patilladash.com");
+        if (admin == null)
         {
-            var local1 = await context.Locales.FirstOrDefaultAsync();
-            var local2 = await context.Locales.OrderByDescending(l => l.Id).FirstOrDefaultAsync();
-
-            var adminPassword = Environment.GetEnvironmentVariable("SEED_ADMIN_PASSWORD") ?? "AdminDemo2026!";
-            var vendedorPassword = Environment.GetEnvironmentVariable("SEED_VENDEDOR_PASSWORD") ?? "VendedorDemo2026!";
-
-            var adminHash = passwordHasher.HashPassword(adminPassword);
-            var vendedorHash = passwordHasher.HashPassword(vendedorPassword);
-
-            var admin = new Usuario(
-                "Administrador Principal",
-                "admin@patilladash.com",
-                adminHash,
-                RolUsuario.Administrador,
-                null
-            );
-
-            var vendedor1 = new Usuario(
-                "Vendedor Sede 1",
-                "vendedor1@patilladash.com",
-                vendedorHash,
-                RolUsuario.Vendedor,
-                local1?.Id ?? 1
-            );
-
-            var vendedor2 = new Usuario(
-                "Vendedor Sede 2",
-                "vendedor2@patilladash.com",
-                vendedorHash,
-                RolUsuario.Vendedor,
-                local2?.Id ?? 2
-            );
-
-            await context.Usuarios.AddRangeAsync(admin, vendedor1, vendedor2);
-            await context.SaveChangesAsync();
+            admin = new Usuario("Administrador Principal", "admin@patilladash.com", adminHash, RolUsuario.Administrador, null);
+            await context.Usuarios.AddAsync(admin);
         }
+        else
+        {
+            admin.ActualizarPassword(adminHash);
+        }
+
+        var maricela = await context.Usuarios.FirstOrDefaultAsync(u => u.Email == "maricela@patilladash.com");
+        if (maricela == null)
+        {
+            maricela = new Usuario("Maricela Montenegro", "maricela@patilladash.com", vendedorHash, RolUsuario.Vendedor, local30?.Id ?? 1);
+            await context.Usuarios.AddAsync(maricela);
+        }
+        else
+        {
+            maricela.ActualizarPassword(vendedorHash);
+        }
+
+        var yenirbeth = await context.Usuarios.FirstOrDefaultAsync(u => u.Email == "yenirbeth@patilladash.com");
+        if (yenirbeth == null)
+        {
+            yenirbeth = new Usuario("Yenirbeth Yadelin", "yenirbeth@patilladash.com", vendedorHash, RolUsuario.Vendedor, local27?.Id ?? 2);
+            await context.Usuarios.AddAsync(yenirbeth);
+        }
+        else
+        {
+            yenirbeth.ActualizarPassword(vendedorHash);
+        }
+
+        await context.SaveChangesAsync();
     }
 }

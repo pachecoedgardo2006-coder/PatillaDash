@@ -2,7 +2,7 @@
 
 Bienvenido al repositorio central de **PatillaDash**, una solución web full-stack moderna, reactiva y desacoplada para la administración, ventas, abastecimiento, business intelligence e inventario de puntos de venta de bebidas artesanales de patilla (*"patillazos"*), refrescos y fritos.
 
-> 🌐 **Aplicación Web en Producción:** [https://patilladash.netlify.app](https://patilladash.netlify.app)
+> 🌐 **Aplicación Web en Producción (Vercel):** [https://patilla-dash.vercel.app](https://patilla-dash.vercel.app)
 
 ---
 
@@ -80,7 +80,7 @@ El negocio de bebidas artesanales opera bajo el principio de **"Registro de Oper
 
 ```mermaid
 graph TD
-    Client[Frontend React 19 en Netlify] -->|HTTP REST / JSON + Bearer JWT| API[PatillaDash.Api - Web Service]
+    Client[Frontend React 19 en Vercel] -->|HTTP REST / JSON + Bearer JWT| API[PatillaDash.Api - Web Service]
     API --> Application[PatillaDash.Application]
     API --> Infrastructure[PatillaDash.Infrastructure]
     Infrastructure --> Application
