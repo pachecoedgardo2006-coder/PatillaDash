@@ -32,6 +32,7 @@ Bienvenido al repositorio central de **PatillaDash**, una solución web full-sta
 10. [Documentación Interactiva Local (Scalar OpenAPI)](#-documentación-interactiva-local-scalar-openapi)
 11. [Pruebas Automatizadas (Testing)](#-pruebas-automatizadas)
 12. [Estructura del Repositorio](#-estructura-del-repositorio)
+13. [Creadores y Créditos](#-creadores-y-créditos)
 
 ---
 
@@ -348,3 +349,13 @@ PatillaDash/
     └── Backend/
         └── PatillaDash.Tests/                # Tests xUnit (Domain, Application, Infra, Api)
 ```
+
+
+---
+
+## 👥 Creadores y Créditos
+
+Este proyecto fue diseñado y desarrollado por:
+
+* **Edgardo Pacheco** — [@pachecoedgardo2006-coder](https://github.com/pachecoedgardo2006-coder)
+* **Mauricio Onofre** — [@onomauri](https://github.com/onomauri)
