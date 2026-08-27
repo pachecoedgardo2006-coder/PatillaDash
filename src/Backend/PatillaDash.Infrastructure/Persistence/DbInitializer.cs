@@ -235,14 +235,17 @@ public static class DbInitializer
             await context.SaveChangesAsync();
         }
 
-        // 6. Sembrar Usuarios (Admin y Vendedoras Reales)
+        // 6. Sembrar Usuarios Iniciales (Admin y Vendedores Demo)
         if (!await context.Usuarios.AnyAsync())
         {
-            var punto30 = await context.Locales.FirstOrDefaultAsync(l => l.Nombre == "Punto de la 30");
-            var punto27 = await context.Locales.FirstOrDefaultAsync(l => l.Nombre == "Punto de la 27");
+            var local1 = await context.Locales.FirstOrDefaultAsync();
+            var local2 = await context.Locales.OrderByDescending(l => l.Id).FirstOrDefaultAsync();
 
-            var adminHash = passwordHasher.HashPassword("Admin123!");
-            var vendedorHash = passwordHasher.HashPassword("Vendedor123!");
+            var adminPassword = Environment.GetEnvironmentVariable("SEED_ADMIN_PASSWORD") ?? "AdminDemo2026!";
+            var vendedorPassword = Environment.GetEnvironmentVariable("SEED_VENDEDOR_PASSWORD") ?? "VendedorDemo2026!";
+
+            var adminHash = passwordHasher.HashPassword(adminPassword);
+            var vendedorHash = passwordHasher.HashPassword(vendedorPassword);
 
             var admin = new Usuario(
                 "Administrador Principal",
@@ -252,23 +255,23 @@ public static class DbInitializer
                 null
             );
 
-            var maricela = new Usuario(
-                "Maricela Montenegro",
-                "maricela@patilladash.com",
+            var vendedor1 = new Usuario(
+                "Vendedor Sede 1",
+                "vendedor1@patilladash.com",
                 vendedorHash,
                 RolUsuario.Vendedor,
-                punto30?.Id ?? 1
+                local1?.Id ?? 1
             );
 
-            var yenirbeth = new Usuario(
-                "Yenirbeth Yadelin",
-                "yenirbeth@patilladash.com",
+            var vendedor2 = new Usuario(
+                "Vendedor Sede 2",
+                "vendedor2@patilladash.com",
                 vendedorHash,
                 RolUsuario.Vendedor,
-                punto27?.Id ?? 2
+                local2?.Id ?? 2
             );
 
-            await context.Usuarios.AddRangeAsync(admin, maricela, yenirbeth);
+            await context.Usuarios.AddRangeAsync(admin, vendedor1, vendedor2);
             await context.SaveChangesAsync();
         }
     }

@@ -1,4 +1,4 @@
-# 🍉 PatillaDash — Plataforma de Gestión Multi-Local de Bebidas Artesanales
+# 🍉 PatillaDash — Plataforma de Gestión Multi-Sede de Bebidas Artesanales
 
 Bienvenido al repositorio central de **PatillaDash**, una solución web full-stack moderna, reactiva y desacoplada para la administración, ventas, abastecimiento, business intelligence e inventario de puntos de venta de bebidas artesanales de patilla (*"patillazos"*), refrescos y fritos.
 
@@ -13,7 +13,7 @@ Bienvenido al repositorio central de **PatillaDash**, una solución web full-sta
 1. [Visión y Modelo de Negocio](#-visión-y-modelo-de-negocio)
 2. [Stack Tecnológico](#-stack-tecnológico)
 3. [Arquitectura del Sistema](#-arquitectura-del-sistema)
-4. [Credenciales Sembradas (Datos Reales)](#-credenciales-sembradas-datos-reales)
+4. [Roles y Acceso al Sistema](#-roles-y-acceso-al-sistema)
 5. [Guía de Inicio Rápido](#-guía-de-inicio-rápido)
    - [Paso 1: Iniciar el Backend (.NET 10 API)](#paso-1-iniciar-el-backend-net-10-api)
    - [Paso 2: Iniciar el Frontend (React 19 + Vite)](#paso-2-iniciar-el-frontend-react-19--vite)
@@ -42,7 +42,7 @@ Bienvenido al repositorio central de **PatillaDash**, una solución web full-sta
 
 El negocio de bebidas artesanales opera bajo el principio de **"Registro de Operación Diaria por Declaración"**:
 * **Naturaleza de la materia prima:** Debido a la variabilidad natural del tamaño y rendimiento de las frutas, el inventario **no** se descuenta con recetas teóricas automáticas por vaso servido.
-* **Cierre de Turno del Vendedor:** Al finalizar la jornada, el colaborador declara los totales recibidos en caja (**Efectivo** vs. **Transferencias / Nequi / Daviplata**), los productos vendidos y la **cantidad exacta de insumos consumidos** (ej. 4 patillas, 45 vasos 9oz, 2 kg de azúcar, bolsas de basura). Al enviar el formulario, el backend descuenta en tiempo real los insumos del stock de la sede.
+* **Cierre de Turno del Vendedor:** Al finalizar la jornada, el colaborador declara los totales recibidos en caja (**Efectivo** vs. **Transferencias / Nequi / Daviplata**), los productos vendidos y la **cantidad exacta de insumos consumidos** (ej. kilos de fruta, vasos, bolsas de insumos). Al enviar el formulario, el backend descuenta en tiempo real los insumos del stock de la sede.
 * **Consolidación del Administrador:** El Administrador supervisa el inventario de todas las sedes con alertas de stock crítico separadas por local, ingresa compras de materia prima (que suman inventario automáticamente), gestiona el equipo de trabajo y nómina con asignación estricta de sede, audita cierres comparando dinero reportado vs. productos vendidos y consulta métricas avanzadas de Business Intelligence.
 
 ### Matriz de Roles y Permisos
@@ -61,7 +61,7 @@ El negocio de bebidas artesanales opera bajo el principio de **"Registro de Oper
 * **Framework:** ASP.NET Core Web API
 * **Arquitectura:** Clean Architecture (Domain-Driven Design)
 * **ORM:** Entity Framework Core 10 (Soporte multi-proveedor SQLite para desarrollo local y PostgreSQL para producción en la nube)
-* **Seguridad:** JWT Bearer Authentication con vigencia de 30 días y `ClockSkew` tolerante de 5 minutos + Hasheo de contraseñas con `BCrypt.Net-Next` + Consultas 100% parametrizadas anti-inyección SQL
+* **Seguridad:** JWT Bearer Authentication con vigencia de 30 días y `ClockSkew` tolerante de 5 minutos + Hasheo criptográfico de contraseñas con `BCrypt.Net-Next` + Consultas 100% parametrizadas anti-inyección SQL
 * **Validación:** FluentValidation + Filtro global de validación
 * **Manejo de Errores:** RFC 7807 `ProblemDetails` / `ValidationProblemDetails`
 * **Documentación:** OpenAPI con `Scalar API Reference`
@@ -94,23 +94,20 @@ graph TD
 
 ---
 
-## 🔑 Credenciales Sembradas (Datos Reales)
+## 🔑 Roles y Acceso al Sistema
 
-El backend inicializa automáticamente la base de datos y coloca los usuarios, puntos de venta y productos listos para operar:
+La plataforma implementa un modelo de autorización por roles (RBAC) con separación estricta de alcance operativo y administrativo:
 
-| Rol | Nombre | Correo Electrónico | Contraseña | Sede Asignada |
-| :--- | :--- | :--- | :--- | :--- |
-| **Administrador** | Administrador Principal | `admin@patilladash.com` | `Admin123!` | Global (Acceso a todas las sedes) |
-| **Vendedor** | Maricela Montenegro | `maricela@patilladash.com` | `Vendedor123!` | Punto de la 30 (Local #1) |
-| **Vendedor** | Yenirbeth Yadelin | `yenirbeth@patilladash.com` | `Vendedor123!` | Punto de la 27 (Local #2) |
+| Rol | Tipo de Usuario | Alcance y Responsabilidad | Acceso |
+| :--- | :--- | :--- | :--- |
+| **Administrador** | Gestión de Negocio / Finanzas | Supervisión global interactiva de todas las sedes, compras, nómina, catálogo de productos y Business Intelligence. | Credenciales maestras configuradas en despliegue |
+| **Vendedor** | Personal en Punto de Venta | Operación restringida a la sede asignada: registro de turnos diarios (dinero en caja, productos servidos e insumos consumidos). | Cuentas creadas internamente por el Administrador |
 
-### Catálogo de Productos Inicial
-* **Galletas el pedazo:** $1.000 COP
-* **Vaso 7oz:** $2.000 COP
-* **Vaso 9oz:** $3.000 COP
-* **Vaso 14oz:** $5.000 COP
-* **Deditos:** $2.500 COP
-* **Pastelitos:** $3.000 COP
+> 🔒 **Buenas Prácticas de Seguridad en Repositorios Públicos:**  
+> Por directrices de ciberseguridad y protección de datos comerciales, **ninguna contraseña, credencial de acceso ni dato privado de colaboradores se publica en este repositorio**. Los accesos al sistema son administrados mediante hashes criptográficos **BCrypt** y tokens Bearer JWT firmados con llaves de entorno privadas.
+
+### Catálogo de Productos y Precios Dinámicos
+Los productos, categorías y listas de precios se gestionan de forma 100% dinâmica e independiente desde el panel web de Administración (`/admin/productos`), permitiendo crear nuevos ítems, actualizar tarifas al instante y habilitar o deshabilitar productos según la disponibilidad de inventario sin necesidad de alterar código fuente.
 
 ---
 
@@ -167,8 +164,8 @@ Para probar la plataforma desde diferentes smartphones conectados a la misma red
 ### 1. Panel del Vendedor (Wizard Móvil en 3 Pasos)
 Diseñado específicamente para smartphones y agilidad en el puesto de trabajo:
 * **Paso 1 (Dinero en Caja):** Ingreso de Efectivo físico y Transferencias (Nequi / Daviplata) con totalizador en vivo.
-* **Paso 2 (Productos Vendidos):** Catálogo de vasos 7oz, 9oz, 14oz, fritos (deditos/pastelitos) y galletas con botones táctiles `+` / `-`.
-* **Paso 3 (Insumos Gastados & Finalizar):** Formulario dinámico con todos los insumos de la sede (Patillas, Vasos, Azúcar, Cucharas, etc.) y novedades del turno.
+* **Paso 2 (Productos Vendidos):** Catálogo interactivo de productos con botones táctiles de incremento/decremento `+` / `-`.
+* **Paso 3 (Insumos Gastados & Finalizar):** Formulario dinámico con todos los insumos de la sede (Materia prima, vasos, endulzantes, complementos) y novedades del turno.
 * **Pestaña "Mi Historial":** Vista separada con paginación de 10 turnos por página y formato de fechas unificado y seguro (`es-CO`).
 
 ---
@@ -188,16 +185,16 @@ Diseñado específicamente para smartphones y agilidad en el puesto de trabajo:
 * **Compras y Entradas (`/admin/compras`):**
   * Panel superior de reabastecimiento urgente de insumos en alerta y registro con auto-incremento de stock.
 * **Personal y Nómina (`/admin/pagos`):**
-  * **Pestaña Colaboradores:** Tarjetas visuales de cada trabajador del equipo con avatar de iniciales, rol con badge blindado contra desbordamiento (`ADMINISTRADOR` / `VENDEDOR`), sede asignada (*Punto de la 30* / *Punto de la 27*), correo y nómina total acumulada.
+  * **Pestaña Colaboradores:** Tarjetas visuales de cada trabajador del equipo con avatar de iniciales, rol con badge blindado contra desbordamiento (`ADMINISTRADOR` / `VENDEDOR`), sede asignada (*Local #1* / *Local #2*), correo del sistema y nómina total acumulada.
   * **Registrar Pago Rápido:** Cada tarjeta contiene un botón directo para registrar pago al colaborador en un solo clic.
-  * **Nuevo Colaborador:** Modal para registrar personal en la plataforma indicando nombre, correo, contraseña inicial, rol y sede de trabajo.
+  * **Nuevo Colaborador:** Modal para registrar personal en la plataforma indicando nombre, correo, contraseña inicial, rol y sede de trabajo (acceso exclusivo para administradores).
   * **Pestaña Historial de Nómina:** Total general pagado, filtro de sede compartido y tabla responsiva paginada a 10 recibos.
 
 ---
 
 ### 3. Módulo de Business Intelligence (BI) y Analítica
 Al hacer clic en la tarjeta **Ingresos Totales (BI)** del Dashboard:
-* **Filtros Dinámicos:** Segmentación por Sede (*Todas*, *Punto de la 30*, *Punto de la 27*) y Periodo (*Histórico*, *Últimos 30 días*, *Últimos 7 días*).
+* **Filtros Dinámicos:** Segmentación por Sede (*Todas*, *Local #1*, *Local #2*) y Periodo (*Histórico*, *Últimos 30 días*, *Últimos 7 días*).
 * **Métricas Clave:** Ingresos filtrados, Ticket Promedio por Turno, Total de Unidades Vendidas y Turnos Auditados.
 * **Gráficas Integradas:** Participación de ventas por sede, productos más vendidos y distribución de medios de pago (Efectivo vs. Transferencia).
 
@@ -293,7 +290,7 @@ Todos los endpoints (salvo `/api/auth/login`) requieren header `Authorization: B
 
 ### 1. Autenticación y Usuarios (`/api/auth`)
 * `POST /api/auth/login`: Autentica credenciales y devuelve JWT con claims de rol y local.
-* `POST /api/auth/register`: Registra un nuevo colaborador.
+* `POST /api/auth/register`: Registra un nuevo colaborador *(Solo Administrador)*.
 * `GET /api/auth/usuarios?localId=...`: Consulta el listado de colaboradores *(Solo Administrador)*.
 
 ### 2. Ventas Diarias (`/api/ventas`)

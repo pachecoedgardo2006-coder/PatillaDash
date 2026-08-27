@@ -1,6 +1,8 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using PatillaDash.Api.Filters;
 using PatillaDash.Api.Middleware;
@@ -16,6 +18,12 @@ Environment.SetEnvironmentVariable("DOTNET_EnableDiagnostics", "0");
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Ocultar cabeceras de servidor para prevenir fingerprinting
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.AddServerHeader = false;
+});
 
 // Soporte dinámico de Puerto para Cloud / Render (variable de entorno PORT)
 var port = Environment.GetEnvironmentVariable("PORT");
@@ -59,7 +67,19 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// Política CORS flexible para desarrollo local y producción en Netlify
+// Rate Limiting para mitigar ataques de fuerza bruta en credenciales
+builder.Services.AddRateLimiter(rateLimiterOptions =>
+{
+    rateLimiterOptions.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    rateLimiterOptions.AddFixedWindowLimiter("loginLimiter", options =>
+    {
+        options.PermitLimit = 10;
+        options.Window = TimeSpan.FromMinutes(1);
+        options.QueueLimit = 0;
+    });
+});
+
+// Política CORS segura y blindada contra orígenes desconocidos
 var allowedOriginsEnv = Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS");
 var customOrigins = allowedOriginsEnv?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
 
@@ -76,11 +96,31 @@ builder.Services.AddCors(options =>
         }
         else
         {
-            // Permite conexiones locales y subdominios de Netlify en desarrollo/staging
-            policy.SetIsOriginAllowed(_ => true)
-                  .AllowAnyHeader()
-                  .AllowAnyMethod()
-                  .AllowCredentials();
+            // Permite únicamente el frontend de producción en Netlify, sus previsualizaciones, localhost y red local
+            policy.SetIsOriginAllowed(origin =>
+            {
+                if (string.IsNullOrEmpty(origin)) return false;
+                if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri)) return false;
+
+                if (uri.Host.Equals("patilladash.netlify.app", StringComparison.OrdinalIgnoreCase) ||
+                    uri.Host.EndsWith(".netlify.app", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+
+                if (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+                    uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
+                    uri.Host.StartsWith("192.168.", StringComparison.OrdinalIgnoreCase) ||
+                    uri.Host.StartsWith("10.", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+
+                return false;
+            })
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
         }
     });
 });
@@ -124,6 +164,16 @@ using (var scope = app.Services.CreateScope())
 // Pipeline de manejo de errores
 app.UseExceptionHandler();
 
+// Headers de Seguridad HTTP contra sniffing, clickjacking y downgrade de referrers
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.Append("X-Frame-Options", "DENY");
+    context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+    context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
+    await next();
+});
+
 // Endpoint de Health Check para Render / Uptime monitors (Soporta GET y HEAD)
 var healthMethods = new[] { "GET", "HEAD" };
 app.MapMethods("/health", healthMethods, () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow, app = "PatillaDash API" }));
@@ -143,6 +193,8 @@ if (enableDocs)
 }
 
 app.UseCors("AllowFrontend");
+
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();
