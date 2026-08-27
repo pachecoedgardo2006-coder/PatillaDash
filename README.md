@@ -2,6 +2,11 @@
 
 Bienvenido al repositorio central de **PatillaDash**, una solución web full-stack moderna, reactiva y desacoplada para la administración, ventas, abastecimiento, business intelligence e inventario de puntos de venta de bebidas artesanales de patilla (*"patillazos"*), refrescos y fritos.
 
+> 🌐 **App Web en Producción (Netlify):** [https://patilladash.netlify.app](https://patilladash.netlify.app)  
+> ⚙️ **API REST en la Nube (Render):** [https://patilladash-api.onrender.com](https://patilladash-api.onrender.com)  
+> 📖 **Referencia Interactiva de la API (Scalar):** [https://patilladash-api.onrender.com/scalar/v1](https://patilladash-api.onrender.com/scalar/v1)  
+> 💓 **Health Check (Keep-Alive):** [https://patilladash-api.onrender.com/health](https://patilladash-api.onrender.com/health)
+
 ---
 
 ## 📑 Tabla de Contenidos
@@ -38,14 +43,14 @@ Bienvenido al repositorio central de **PatillaDash**, una solución web full-sta
 El negocio de bebidas artesanales opera bajo el principio de **"Registro de Operación Diaria por Declaración"**:
 * **Naturaleza de la materia prima:** Debido a la variabilidad natural del tamaño y rendimiento de las frutas, el inventario **no** se descuenta con recetas teóricas automáticas por vaso servido.
 * **Cierre de Turno del Vendedor:** Al finalizar la jornada, el colaborador declara los totales recibidos en caja (**Efectivo** vs. **Transferencias / Nequi / Daviplata**), los productos vendidos y la **cantidad exacta de insumos consumidos** (ej. 4 patillas, 45 vasos 9oz, 2 kg de azúcar, bolsas de basura). Al enviar el formulario, el backend descuenta en tiempo real los insumos del stock de la sede.
-* **Consolidación del Administrador:** El Administrador supervisa el inventario de todas las sedes con alertas de stock crítico separadas por local, ingresa compras de materia prima (que suman inventario automáticamente), gestiona nómina/pagos con validación de sede, audita cierres comparando dinero reportado vs. productos vendidos y consulta métricas avanzadas de Business Intelligence.
+* **Consolidación del Administrador:** El Administrador supervisa el inventario de todas las sedes con alertas de stock crítico separadas por local, ingresa compras de materia prima (que suman inventario automáticamente), gestiona el equipo de trabajo y nómina con asignación estricta de sede, audita cierres comparando dinero reportado vs. productos vendidos y consulta métricas avanzadas de Business Intelligence.
 
 ### Matriz de Roles y Permisos
 
 | Rol | Alcance | Vistas y Permisos Habilitados |
 | :--- | :--- | :--- |
 | **Vendedor** | Solo su local asignado (`LocalId`) | • **Formulario Asistido (Wizard 3 Pasos):** Efectivo, Transferencias, Productos Vendidos e Insumos consumidos del catálogo de la sede.<br>• **Mi Historial de Turnos:** Pestaña independiente paginada a 10 registros por página.<br>• **Toasts Flotantes:** Notificaciones fijas en la parte superior sin necesidad de scroll.<br>• **Mobile Friendly:** Prevención de auto-zoom en iOS Safari y teclado adaptativo. |
-| **Administrador** | Global (Todas las sedes) | • **Dashboard & BI:** Balance Neto, Ingresos, Gastos (Compras + Nómina), Alertas de Stock Crítico por Sede y **Modal Interactivo de Business Intelligence (BI)**.<br>• **Ventas y Cierres:** Historial general paginado (10 items) con **Auditoría de Cuadre** (Caja vs. Productos vendidos) y fechas estandarizadas.<br>• **Gestión de Productos:** Catálogo dinámico con activación/desactivación de ítems.<br>• **Inventario:** Stock en tiempo real, alertas y ajuste manual.<br>• **Compras y Reabastecimiento:** Panel prioritario de insumos críticos con compras a 1-clic y suma automática a inventario.<br>• **Personal y Nómina:** Registro de colaboradores y pagos con asignación estricta de sede. |
+| **Administrador** | Global (Todas las sedes) | • **Dashboard & BI:** Balance Neto, Ingresos, Gastos (Compras + Nómina), Alertas de Stock Crítico por Sede y **Modal Interactivo de Business Intelligence (BI)**.<br>• **Ventas y Cierres:** Historial general paginado (10 items) con **Auditoría de Cuadre** (Caja vs. Productos vendidos) y fechas estandarizadas.<br>• **Gestión de Productos:** Catálogo dinámico con activación/desactivación de ítems en 1 clic.<br>• **Inventario:** Stock en tiempo real, alertas de mínimo y ajuste manual.<br>• **Compras y Reabastecimiento:** Panel prioritario de insumos críticos con compras a 1-clic y suma automática a inventario.<br>• **Personal y Nómina:** Doble pestaña (**Colaboradores** con tarjetas de equipo, badge blindado y registro de pagos directos + **Historial de Nómina** con totales y filtros) + Modal de **Registro de Nuevos Colaboradores**. |
 
 ---
 
@@ -84,7 +89,7 @@ graph TD
     Application --> Domain[PatillaDash.Domain]
     Infrastructure --> Domain
     Infrastructure --> DB[(PostgreSQL en Supabase / SQLite Local)]
-    Cron[cron-job.org / UptimeRobot] -->|Ping cada 10 min a /health| API
+    Cron[cron-job.org / UptimeRobot] -->|GET / HEAD cada 10 min a /health| API
 ```
 
 ---
@@ -177,13 +182,16 @@ Diseñado específicamente para smartphones y agilidad en el puesto de trabajo:
   * Historial general con filtro por sede y paginación de 10 registros.
   * **Auditoría de Cierre:** Comparativa automática entre el *Dinero Reportado en Caja* vs. *Total según Productos Vendidos* indicando **Cuadre Perfecto ($0)**, **Sobrante** o **Descuadre**.
 * **Gestión de Productos (`/admin/productos`):**
-  * Creación, edición de precios y activación/desactivación de ítems del catálogo.
+  * Creación, edición de precios y activación/desactivación dinámica de ítems con `PATCH /api/productos/{id}/toggle`.
 * **Inventario General (`/admin/inventario`):**
   * Existencias en tiempo real, alertas de stock mínimo y modal de ajuste manual.
 * **Compras y Entradas (`/admin/compras`):**
   * Panel superior de reabastecimiento urgente de insumos en alerta y registro con auto-incremento de stock.
 * **Personal y Nómina (`/admin/pagos`):**
-  * Registro de colaboradores y pagos de nómina con selección estricta de sede.
+  * **Pestaña Colaboradores:** Tarjetas visuales de cada trabajador del equipo con avatar de iniciales, rol con badge blindado contra desbordamiento (`ADMINISTRADOR` / `VENDEDOR`), sede asignada (*Punto de la 30* / *Punto de la 27*), correo y nómina total acumulada.
+  * **Registrar Pago Rápido:** Cada tarjeta contiene un botón directo para registrar pago al colaborador en un solo clic.
+  * **Nuevo Colaborador:** Modal para registrar personal en la plataforma indicando nombre, correo, contraseña inicial, rol y sede de trabajo.
+  * **Pestaña Historial de Nómina:** Total general pagado, filtro de sede compartido y tabla responsiva paginada a 10 recibos.
 
 ---
 
@@ -293,7 +301,7 @@ Todos los endpoints (salvo `/api/auth/login`) requieren header `Authorization: B
 * `GET /api/productos?incluirInactivos=...`: Listado de catálogo de productos.
 * `POST /api/productos`: Crear nuevo producto *(Solo Administrador)*.
 * `PUT /api/productos/{id}`: Actualizar producto *(Solo Administrador)*.
-* `DELETE /api/productos/{id}`: Desactivar producto *(Solo Administrador)*.
+* `PATCH /api/productos/{id}/toggle`: Alternar estado activo/inactivo del producto *(Solo Administrador)*.
 
 ### 5. Compras (`/api/compras`)
 * `POST /api/compras`: Registra compra de insumos y suma stock disponible *(Solo Administrador)*.
@@ -301,6 +309,7 @@ Todos los endpoints (salvo `/api/auth/login`) requieren header `Authorization: B
 
 ### 6. Pagos y Nómina (`/api/pagos`)
 * `POST /api/pagos`: Registra pago de nómina validando la sede del colaborador *(Solo Administrador)*.
+* `GET /api/pagos?localId=...`: Historial general paginado/filtrado de nómina *(Solo Administrador)*.
 * `GET /api/pagos/local/{localId}`: Historial de pagos de una sede *(Solo Administrador)*.
 * `GET /api/pagos/vendedor/{vendedorId}`: Historial de pagos de un colaborador.
 
