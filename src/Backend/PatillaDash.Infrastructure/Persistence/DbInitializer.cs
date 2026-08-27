@@ -13,65 +13,6 @@ public static class DbInitializer
 {
     public static async Task SeedAsync(PatillaDbContext context, IPasswordHasher passwordHasher)
     {
-        // 0. En PostgreSQL / Supabase / Render:
-        // Si las tablas se crearon previamente con esquemas incompatibles (por ejemplo "Activo" como integer
-        // o "Id" sin autoincremento identity), realizamos una limpieza preventiva para que MigrateAsync
-        // cree todas las tablas limpiamente con sus tipos nativos e identidades completas.
-        if (context.Database.IsNpgsql())
-        {
-            try
-            {
-                var conn = context.Database.GetDbConnection();
-                if (conn.State != System.Data.ConnectionState.Open)
-                {
-                    await conn.OpenAsync();
-                }
-
-                // Averiguar si la tabla "Locales" existe y necesita reconstrucción
-                using var checkCmd = conn.CreateCommand();
-                checkCmd.CommandText = @"
-                    SELECT 
-                        COALESCE(bool_or(data_type NOT LIKE '%bool%'), false) AS legacy_activo,
-                        COALESCE(bool_or(is_identity = 'NO' AND column_default IS NULL), false) AS missing_identity
-                    FROM information_schema.columns 
-                    WHERE (LOWER(table_name) = 'locales' AND LOWER(column_name) = 'activo')
-                       OR (LOWER(table_name) = 'locales' AND LOWER(column_name) = 'id');";
-
-                bool needsCleanRecreate = false;
-                using (var reader = await checkCmd.ExecuteReaderAsync())
-                {
-                    if (await reader.ReadAsync())
-                    {
-                        var legacyActivo = !reader.IsDBNull(0) && reader.GetBoolean(0);
-                        var missingIdentity = !reader.IsDBNull(1) && reader.GetBoolean(1);
-                        needsCleanRecreate = legacyActivo || missingIdentity;
-                    }
-                }
-
-                if (needsCleanRecreate)
-                {
-                    Console.WriteLine("[DbInitializer] Esquema incompatible detectado en PostgreSQL (Activo legacy o Id sin identity). Limpiando tablas...");
-                    using var dropCmd = conn.CreateCommand();
-                    dropCmd.CommandText = @"
-                        DROP TABLE IF EXISTS ""ConsumosSuministroDiario"", ""DetallesVentaDiaria"", ""InventariosLocal"", 
-                                              ""PagosEmpleado"", ""ComprasInsumo"", ""RegistrosVentaDiaria"", 
-                                              ""Usuarios"", ""Productos"", ""Suministros"", ""Locales"", 
-                                              ""__EFMigrationsHistory"" CASCADE;
-                        DROP TABLE IF EXISTS consumos_suministro_diario, detalles_venta_diaria, inventarios_local, 
-                                              pagos_empleado, compras_insumo, registros_venta_diaria, 
-                                              usuarios, productos, suministros, locales CASCADE;
-                        DROP TABLE IF EXISTS consumossuministrodiario, detallesventadiaria, inventarioslocal, 
-                                              pagosempleado, comprasinsumo, registrosventadiaria, 
-                                              usuarios, productos, suministros, locales CASCADE;";
-                    await dropCmd.ExecuteNonQueryAsync();
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[DbInitializer] Nota en verificación preventiva de PostgreSQL: {ex.Message}");
-            }
-        }
-
         // 1. Ejecutar migraciones con tipos nativos tanto en SQLite (local) como en PostgreSQL (Supabase / Render)
         try
         {

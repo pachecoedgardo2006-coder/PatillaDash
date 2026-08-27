@@ -2,10 +2,7 @@
 
 Bienvenido al repositorio central de **PatillaDash**, una solución web full-stack moderna, reactiva y desacoplada para la administración, ventas, abastecimiento, business intelligence e inventario de puntos de venta de bebidas artesanales de patilla (*"patillazos"*), refrescos y fritos.
 
-> 🌐 **App Web en Producción (Netlify):** [https://patilladash.netlify.app](https://patilladash.netlify.app)  
-> ⚙️ **API REST en la Nube (Render):** [https://patilladash-api.onrender.com](https://patilladash-api.onrender.com)  
-> 📖 **Referencia Interactiva de la API (Scalar):** [https://patilladash-api.onrender.com/scalar/v1](https://patilladash-api.onrender.com/scalar/v1)  
-> 💓 **Health Check (Keep-Alive):** [https://patilladash-api.onrender.com/health](https://patilladash-api.onrender.com/health)
+> 🌐 **Aplicación Web en Producción:** [https://patilladash.netlify.app](https://patilladash.netlify.app)
 
 ---
 
@@ -25,14 +22,14 @@ Bienvenido al repositorio central de **PatillaDash**, una solución web full-sta
    - [Flujo Directo de Reabastecimiento Crítico](#4-flujo-directo-de-reabastecimiento-crítico)
    - [Experiencia Móvil Optimizada, Safari iOS y Resiliencia](#5-experiencia-móvil-optimizada-safari-ios-y-resiliencia)
 7. [Seguridad y Anti-Inyecciones SQL](#-seguridad-y-anti-inyecciones-sql)
-8. [Despliegue en la Nube y Costos Operativos ($0 USD)](#-despliegue-en-la-nube-y-costos-operativos-0-usd)
+8. [Infraestructura y Despliegue en la Nube](#-infraestructura-y-despliegue-en-la-nube)
    - [Backend en Render](#backend-en-render-web-service)
    - [Frontend en Netlify](#frontend-en-netlify-spa)
    - [Base de Datos PostgreSQL (Supabase)](#base-de-datos-postgresql-supabase)
    - [Estrategia Keep-Alive 24/7 (Anti Cold-Start Gratuita)](#estrategia-keep-alive-247-anti-cold-start-gratuita)
    - [Portabilidad y Migración Futura de Base de Datos](#portabilidad-y-migración-futura-de-base-de-datos)
-9. [Contratos de API y Endpoints](#-contratos-de-api-y-endpoints)
-10. [Documentación Interactiva (Scalar OpenAPI)](#-documentación-interactiva-scalar-openapi)
+9. [Arquitectura de Servicios y Módulos de la API](#-arquitectura-de-servicios-y-módulos-de-la-api)
+10. [Documentación Interactiva Local (Scalar OpenAPI)](#-documentación-interactiva-local-scalar-openapi)
 11. [Pruebas Automatizadas (Testing)](#-pruebas-automatizadas)
 12. [Estructura del Repositorio](#-estructura-del-repositorio)
 
@@ -61,7 +58,7 @@ El negocio de bebidas artesanales opera bajo el principio de **"Registro de Oper
 * **Framework:** ASP.NET Core Web API
 * **Arquitectura:** Clean Architecture (Domain-Driven Design)
 * **ORM:** Entity Framework Core 10 (Soporte multi-proveedor SQLite para desarrollo local y PostgreSQL para producción en la nube)
-* **Seguridad:** JWT Bearer Authentication con vigencia de 30 días y `ClockSkew` tolerante de 5 minutos + Hasheo criptográfico de contraseñas con `BCrypt.Net-Next` + Consultas 100% parametrizadas anti-inyección SQL
+* **Seguridad:** JWT Bearer Authentication con vigencia de 30 días y `ClockSkew` tolerante de 5 minutos + Hasheo criptográfico de contraseñas con `BCrypt.Net-Next` + Consultas 100% parametrizadas anti-inyección SQL + Rate Limiting en autenticación
 * **Validación:** FluentValidation + Filtro global de validación
 * **Manejo de Errores:** RFC 7807 `ProblemDetails` / `ValidationProblemDetails`
 * **Documentación:** OpenAPI con `Scalar API Reference`
@@ -82,14 +79,14 @@ El negocio de bebidas artesanales opera bajo el principio de **"Registro de Oper
 
 ```mermaid
 graph TD
-    Client[Frontend React 19 en Netlify] -->|HTTP REST / JSON + Bearer JWT| API[PatillaDash.Api en Render]
+    Client[Frontend React 19 en Netlify] -->|HTTP REST / JSON + Bearer JWT| API[PatillaDash.Api - Web Service]
     API --> Application[PatillaDash.Application]
     API --> Infrastructure[PatillaDash.Infrastructure]
     Infrastructure --> Application
     Application --> Domain[PatillaDash.Domain]
     Infrastructure --> Domain
-    Infrastructure --> DB[(PostgreSQL en Supabase / SQLite Local)]
-    Cron[cron-job.org / UptimeRobot] -->|GET / HEAD cada 10 min a /health| API
+    Infrastructure --> DB[(PostgreSQL en la Nube / SQLite Local)]
+    Cron[Monitor 24/7 Keep-Alive] -->|Ping HTTP recurrente| API
 ```
 
 ---
@@ -104,7 +101,7 @@ La plataforma implementa un modelo de autorización por roles (RBAC) con separac
 | **Vendedor** | Personal en Punto de Venta | Operación restringida a la sede asignada: registro de turnos diarios (dinero en caja, productos servidos e insumos consumidos). | Cuentas creadas internamente por el Administrador |
 
 > 🔒 **Buenas Prácticas de Seguridad en Repositorios Públicos:**  
-> Por directrices de ciberseguridad y protección de datos comerciales, **ninguna contraseña, credencial de acceso ni dato privado de colaboradores se publica en este repositorio**. Los accesos al sistema son administrados mediante hashes criptográficos **BCrypt** y tokens Bearer JWT firmados con llaves de entorno privadas.
+> Por directrices de ciberseguridad y privacidad, **ninguna contraseña, credencial de acceso ni dato privado de colaboradores se publica en este repositorio**. Los accesos al sistema son administrados mediante hashes criptográficos **BCrypt** y tokens Bearer JWT firmados con llaves de entorno privadas.
 
 ### Catálogo de Productos y Precios Dinámicos
 Los productos, categorías y listas de precios se gestionan de forma 100% dinâmica e independiente desde el panel web de Administración (`/admin/productos`), permitiendo crear nuevos ítems, actualizar tarifas al instante y habilitar o deshabilitar productos según la disponibilidad de inventario sin necesidad de alterar código fuente.
@@ -129,7 +126,7 @@ dotnet run
 ```
 
 > **La API se ejecutará en:** `http://localhost:5136` (y `http://0.0.0.0:5136` para red local)  
-> **Documentación interactiva (Scalar):** [`http://localhost:5136/scalar/v1`](http://localhost:5136/scalar/v1)
+> **Documentación interactiva de desarrollo (Scalar):** [`http://localhost:5136/scalar/v1`](http://localhost:5136/scalar/v1)
 
 ---
 
@@ -227,28 +224,29 @@ Al hacer clic en la tarjeta **Ingresos Totales (BI)** del Dashboard:
 
 * **Cero SQL Concatenado:** Todas las operaciones a la base de datos se ejecutan mediante consultas fuertemente tipadas y parametrizadas con **Entity Framework Core LINQ**, eliminando cualquier vector de SQL Injection.
 * **Contraseñas Criptográficamente Seguras:** Hasheadas con algoritmo **BCrypt** de factor de costo adaptativo.
-* **Protección de Rutas y JWT:** Validación de firmas criptográficas Bearer JWT en backend y Guards reactivos en frontend.
+* **Protección de Rutas y Tokens Criptográficos:** Validación de firmas Bearer JWT en backend con clave privada de entorno y Guards reactivos en frontend.
+* **Rate Limiting Anti-Fuerza Bruta:** Control de tasa en autenticación con bloqueo automático temporal en caso de reintentos continuos.
+* **CORS Restrictivo:** Admite exclusivamente orígenes legítimos verificados.
 
 ---
 
-## ☁️ Despliegue en la Nube y Costos Operativos ($0 USD)
+## ☁️ Infraestructura y Despliegue en la Nube
 
-Toda la infraestructura productiva actual opera bajo planes gratuitos perpetuos:
+Toda la infraestructura productiva opera bajo un esquema de micro-servicios desacoplados y eficientes:
 
-| Componente | Plataforma Elegida | Límite Gratuito Incluido | Costo Mensual |
-| :--- | :--- | :--- | :--- |
-| **Backend API** | [Render](https://render.com) (Web Service Linux) | 750 horas de cómputo / mes (suficiente para 24/7) | **$0.00** |
-| **Frontend SPA** | [Netlify](https://netlify.com) (CDN Edge) | 100 GB ancho de banda + 300 min build | **$0.00** |
-| **Base de Datos** | [Supabase](https://supabase.com) (PostgreSQL 15+) | 500 MB almacenamiento + backups automáticos | **$0.00** |
-| **Keep-Alive Monitor** | [cron-job.org](https://cron-job.org) | Tareas recurrentes ilimitadas y pings HTTP | **$0.00** |
+| Componente | Plataforma Elegida | Rol en el Sistema |
+| :--- | :--- | :--- |
+| **Backend API** | [Render](https://render.com) | Web Service Linux con arquitectura .NET 10 y Rate Limiting |
+| **Frontend SPA** | [Netlify](https://netlify.com) | Red Global Edge CDN con CI/CD automatizado desde GitHub |
+| **Base de Datos** | [Supabase](https://supabase.com) | Motor relacional PostgreSQL con aislamiento seguro |
+| **Monitor Keep-Alive** | [cron-job.org](https://cron-job.org) | Monitor continuo de disponibilidad |
 
 ### Backend en Render (Web Service)
 * **Entorno:** .NET 10 Web Service en Linux.
-* **URL Pública:** `https://patilladash-api.onrender.com`
 * **Variables de Entorno en Render:**
-  * `DATABASE_URL`: Cadena de conexión a PostgreSQL (`postgres://postgres:[PASSWORD]@[HOST]:[PORT]/postgres`).
-  * `JWT_SECRET_KEY`: Llave secreta para generación y validación de tokens JWT.
-  * `PORT`: Determinado dinámicamente por Render (ej. `10000`).
+  * `DATABASE_URL`: Cadena de conexión protegida a PostgreSQL.
+  * `JWT_SECRET_KEY`: Llave privada para generación y verificación de tokens JWT.
+  * `PORT`: Determinado dinámicamente por la plataforma.
 
 ### Frontend en Netlify (SPA)
 * **Repositorio:** Conectado a GitHub vía CI/CD (despliegues automáticos con cada `git push`).
@@ -256,79 +254,47 @@ Toda la infraestructura productiva actual opera bajo planes gratuitos perpetuos:
 * **Build command:** `npm run build`
 * **Publish directory:** `dist`
 * **Variables de Entorno en Netlify:**
-  * `VITE_API_URL`: `https://patilladash-api.onrender.com/api`
+  * `VITE_API_URL`: Variable de entorno apuntando al endpoint de la API.
 
 ### Base de Datos PostgreSQL (Supabase)
-* Configurada con auto-incrementos nativos vía `GENERATED BY DEFAULT AS IDENTITY`, compatibilidad de tipos `boolean` y soporte de timestamps universales.
+* Configurada con auto-incrementos nativos vía `GENERATED BY DEFAULT AS IDENTITY`, compatibilidad de tipos `boolean`, timestamps universales y persistencia continua respaldada.
 
 ### Estrategia Keep-Alive 24/7 (Anti Cold-Start Gratuita)
-En las nubes gratuitas, los servidores entran en suspensión tras 15 minutos de inactividad, lo que causa una demora de arranque de 30-50 segundos al siguiente usuario. Para garantizar respuesta en <200 ms a las vendedoras:
-* Se configuró un cronjob en **cron-job.org** que envía un `GET` cada 10 minutos a `https://patilladash-api.onrender.com/health`.
-* El endpoint responde en 1 milisegundo directamente desde memoria (`{ "status": "Healthy" }`), manteniendo el contenedor caliente sin consumir transferencias ni recursos de base de datos.
-* También admite solicitudes `HEAD` para monitores externos como **UptimeRobot**.
+En entornos de nube, las instancias pueden entrar en suspensión tras periodos prolongados de inactividad:
+* Se configuró un cronjob en **cron-job.org** que envía un chequeo periódico al endpoint de salud (`/health`).
+* El endpoint responde en 1 milisegundo directamente desde memoria (`{ "status": "Healthy" }`), manteniendo el contenedor activo y disponible de forma permanente para las vendedoras en los puntos de venta.
 
 ### Portabilidad y Migración Futura de Base de Datos
 El proyecto fue construido bajo Clean Architecture con **cero dependencia propietaria de Supabase**:
-* **100% Estándar PostgreSQL:** No se usan extensiones exclusivas ni bloqueos de proveedor.
-* Si en el futuro se desea mudar a **Neon**, **Railway**, **Amazon Aurora / RDS**, **DigitalOcean** o un servidor propio:
-  1. Exportar datos actuales:
-     ```bash
-     pg_dump -h <HOST_SUPABASE> -U postgres -d postgres > backup_patilladash.sql
-     ```
-  2. Importar en el nuevo proveedor:
-     ```bash
-     psql -h <NUEVO_HOST> -U <NUEVO_USUARIO> -d <NUEVA_BD> < backup_patilladash.sql
-     ```
-  3. Actualizar la variable de entorno `DATABASE_URL` en el dashboard de Render.
-  4. **Cero cambios de código requeridos en la aplicación.**
+* **100% Estándar PostgreSQL:** No se usan extensiones exclusivas ni bloqueos de tecnología propietaria.
+* Si en el futuro se desea mudar a **Neon**, **Railway**, **Amazon Aurora / RDS** o un servidor propio:
+  1. Exportar datos actuales con `pg_dump`.
+  2. Importar en el nuevo destino con `psql`.
+  3. Actualizar la variable de entorno `DATABASE_URL` en el backend.
+  4. **Cero cambios de código fuente requeridos.**
 
 ---
 
-## 📡 Contratos de API y Endpoints
+## 📡 Arquitectura de Servicios y Módulos de la API
 
-Todos los endpoints (salvo `/api/auth/login`) requieren header `Authorization: Bearer <TOKEN_JWT>`.
+La API REST desacoplada distribuye sus responsabilidades comerciales en controladores especializados, donde todas las conexiones fuera de la autenticación inicial exigen token criptográfico `Bearer <JWT>` con validación estricta de rol (`Administrador` o `Vendedor`):
 
-### 1. Autenticación y Usuarios (`/api/auth`)
-* `POST /api/auth/login`: Autentica credenciales y devuelve JWT con claims de rol y local.
-* `POST /api/auth/register`: Registra un nuevo colaborador *(Solo Administrador)*.
-* `GET /api/auth/usuarios?localId=...`: Consulta el listado de colaboradores *(Solo Administrador)*.
-
-### 2. Ventas Diarias (`/api/ventas`)
-* `POST /api/ventas/diaria`: Registra el cierre diario de caja, productos e insumos consumidos.
-* `GET /api/ventas?localId=...`: Historial general de ventas *(Solo Administrador)*.
-* `GET /api/ventas/{id}`: Detalle de auditoría con productos, consumos y totales.
-* `GET /api/ventas/local/{localId}`: Ventas recientes de una sede específica.
-
-### 3. Inventario (`/api/inventario`)
-* `GET /api/inventario/local/{localId}`: Consulta existencias y alertas de suministros de un local.
-* `PUT /api/inventario/stock`: Ajuste manual de stock *(Solo Administrador)*.
-
-### 4. Productos (`/api/productos`)
-* `GET /api/productos?incluirInactivos=...`: Listado de catálogo de productos.
-* `POST /api/productos`: Crear nuevo producto *(Solo Administrador)*.
-* `PUT /api/productos/{id}`: Actualizar producto *(Solo Administrador)*.
-* `PATCH /api/productos/{id}/toggle`: Alternar estado activo/inactivo del producto *(Solo Administrador)*.
-
-### 5. Compras (`/api/compras`)
-* `POST /api/compras`: Registra compra de insumos y suma stock disponible *(Solo Administrador)*.
-* `GET /api/compras?localId=...`: Historial de compras *(Solo Administrador)*.
-
-### 6. Pagos y Nómina (`/api/pagos`)
-* `POST /api/pagos`: Registra pago de nómina validando la sede del colaborador *(Solo Administrador)*.
-* `GET /api/pagos?localId=...`: Historial general paginado/filtrado de nómina *(Solo Administrador)*.
-* `GET /api/pagos/local/{localId}`: Historial de pagos de una sede *(Solo Administrador)*.
-* `GET /api/pagos/vendedor/{vendedorId}`: Historial de pagos de un colaborador.
-
-### 7. Estadísticas (`/api/estadisticas`)
-* `GET /api/estadisticas/dashboard?fechaInicio=...&fechaFin=...`: Métricas consolidadas, ranking y alertas de stock de todas las sedes *(Solo Administrador)*.
+* 🔐 **Módulo de Identidad y Acceso:** Autenticación con limitador de tasa contra fuerza bruta, emisión de tokens con claims de sede y gestión interna de colaboradores (restringido a administradores).
+* 🛒 **Módulo de Ventas y Cierres Operativos:** Recepción del reporte diario por declaración de turnos (efectivo, transferencias, productos vendidos e insumos consumidos con auto-descuento en tiempo real) y auditoría comparativa de caja.
+* 📦 **Módulo de Inventario y Stock:** Consulta y cálculo de alertas de stock crítico por sede comercial y ajuste seguro de existencias.
+* 🏷️ **Módulo de Catálogo de Productos:** Consulta de menú para puntos de venta y administración dinámica de productos, estados activo/inactivo y tarifas.
+* 🚚 **Módulo de Compras y Reabastecimiento:** Registro de compras de materia prima e insumos con reabastecimiento directo al inventario de la sede de destino.
+* 💼 **Módulo de Nómina y Personal:** Control de pagos de colaboradores, segregación por sede, historial de liquidaciones y balance de nómina.
+* 📊 **Módulo de Métricas y Analítica Administrativa:** Métricas ejecutivas consolidadas y agregaciones analíticas para el panel de Business Intelligence.
 
 ---
 
-## 📖 Documentación Interactiva (Scalar OpenAPI)
+## 📖 Documentación Interactiva Local (Scalar OpenAPI)
 
-Para consultar y ejecutar pruebas interactivas de la API:
-1. Inicia la API con `dotnet run` (o accede a la URL en producción de Render).
-2. Ingresa a: **[`https://patilladash-api.onrender.com/scalar/v1`](https://patilladash-api.onrender.com/scalar/v1)** *(o `http://localhost:5136/scalar/v1` en local)*.
+En fase de desarrollo local, la solución expone la especificación OpenAPI interactiva gestionada con **Scalar API Reference**:
+
+1. Inicia la API localmente (`dotnet run`).
+2. Ingresa en tu navegador a: **[`http://localhost:5136/scalar/v1`](http://localhost:5136/scalar/v1)**.
 
 ---
 
@@ -339,9 +305,6 @@ El backend cuenta con una suite de **22 pruebas unitarias y de integración** (x
 ```bash
 # Ejecutar todas las pruebas del Backend
 dotnet test --no-restore
-
-# Ejecutar con detalles
-dotnet test --logger "console;verbosity=normal"
 ```
 
 Para comprobar la compilación de producción del Frontend:
