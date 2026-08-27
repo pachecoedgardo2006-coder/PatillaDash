@@ -253,7 +253,7 @@ Toda la infraestructura productiva opera bajo un esquema de micro-servicios desa
 * **Repositorio:** Conectado a GitHub vía CI/CD (despliegues automáticos ultrarrápidos con cada `git push`).
 * **Framework Preset:** `Vite`
 * **Configuración del proyecto en Vercel:**
-  * **Root Directory:** `src/Frontend` (o raíz con `vercel.json`).
+  * **Root Directory:** `src/Frontend`.
   * **Build Command:** Opcional / detectado automáticamente (`npm run build`).
   * **Output Directory:** `dist`
 * **Variables de Entorno en Vercel:**
@@ -325,7 +325,6 @@ npm run build
 PatillaDash/
 ├── README.md                                 # Documentación central del proyecto
 ├── PATILLADASH_SPEC.md                       # Especificación técnica del negocio
-├── vercel.json                               # Configuración central de despliegue Vercel
 ├── netlify.toml                              # Configuración alternativa de despliegue Netlify
 ├── PatillaDash.slnx                          # Solución .NET 10
 │
@@ -339,6 +338,7 @@ PatillaDash/
 │   └── Frontend/                             # React 19 + Vite 8 + Tailwind CSS v4 SPA
 │       ├── index.html
 │       ├── vite.config.js
+│       ├── vercel.json                               # Configuración y rewrites SPA para Vercel
 │       ├── package.json
 │       └── src/
 │           ├── components/                   # AdminLayout, ProtectedRoute, ErrorBoundary, etc.
