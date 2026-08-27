@@ -102,8 +102,10 @@ builder.Services.AddCors(options =>
                 if (string.IsNullOrEmpty(origin)) return false;
                 if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri)) return false;
 
+                // Permitir dominios oficiales y previsualizaciones en Netlify y Vercel
                 if (uri.Host.Equals("patilladash.netlify.app", StringComparison.OrdinalIgnoreCase) ||
-                    uri.Host.EndsWith(".netlify.app", StringComparison.OrdinalIgnoreCase))
+                    uri.Host.EndsWith(".netlify.app", StringComparison.OrdinalIgnoreCase) ||
+                    uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
                 }
