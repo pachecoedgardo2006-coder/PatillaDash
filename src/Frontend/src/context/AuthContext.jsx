@@ -12,7 +12,7 @@ export const AuthProvider = ({ children }) => {
         return JSON.parse(storedUser);
       }
     } catch (e) {
-      console.error('Error al parsear usuario de localStorage:', e);
+      console.warn('Advertencia al leer usuario de localStorage (Safari/iOS):', e);
     }
     return null;
   });
@@ -21,19 +21,29 @@ export const AuthProvider = ({ children }) => {
 
   const login = (data) => {
     const userData = {
+      id: data.id || data.usuarioId,
+      usuarioId: data.id || data.usuarioId,
       nombre: data.nombre,
       email: data.email,
       rol: data.rol,
       localId: data.localId,
     };
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(userData));
+    try {
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(userData));
+    } catch (e) {
+      console.warn('Advertencia al escribir en localStorage (Safari/iOS):', e);
+    }
     setUser(userData);
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    try {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    } catch (e) {
+      console.warn('Advertencia al limpiar localStorage:', e);
+    }
     setUser(null);
     window.location.replace('/login');
   };

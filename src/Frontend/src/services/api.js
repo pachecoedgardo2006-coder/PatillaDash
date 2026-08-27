@@ -13,11 +13,15 @@ const api = axios.create({
   },
 });
 
-// Interceptor de Peticiones: Inyectar JWT
+// Interceptor de Peticiones: Inyectar JWT protegido contra navegadores con storage restringido
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  try {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } catch (e) {
+    console.warn('Storage no disponible para inyectar token:', e);
   }
   return config;
 });
@@ -33,8 +37,12 @@ api.interceptors.response.use(
     }
 
     if (error.response && error.response.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      try {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      } catch (e) {
+        // Ignorar excepción en Safari privado
+      }
       const pathname = window.location.pathname;
       if (pathname !== '/login' && pathname !== '/login/') {
         window.location.href = '/login';

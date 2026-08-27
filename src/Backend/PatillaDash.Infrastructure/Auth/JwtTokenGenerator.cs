@@ -43,7 +43,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
             issuer: _configuration["Jwt:Issuer"] ?? "PatillaDashApi",
             audience: _configuration["Jwt:Audience"] ?? "PatillaDashClient",
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(8),
+            expires: DateTime.UtcNow.AddDays(30),
             signingCredentials: creds
         );
 

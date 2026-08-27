@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import { comprasService, estadisticasService } from '../services/api';
+import { formatearFecha } from '../utils/fechas';
 import { 
   ShoppingCart, 
   Plus, 
@@ -51,11 +52,14 @@ export default function AdminCompras() {
   useEffect(() => {
     if (isModalOpen) {
       document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = 'unset';
     }
     return () => {
       document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = 'unset';
     };
   }, [isModalOpen]);
 
@@ -332,7 +336,7 @@ export default function AdminCompras() {
                     <td className="p-3.5 text-gray-600 text-xs">
                       <div className="flex items-center gap-1.5">
                         <Calendar size={14} className="text-gray-400" />
-                        <span>{new Date(c.fecha).toLocaleDateString('es-CO')}</span>
+                        <span>{formatearFecha(c.fecha)}</span>
                       </div>
                     </td>
                     <td className="p-3.5 font-bold text-gray-800 text-xs sm:text-sm">{c.nombreLocal}</td>
@@ -377,7 +381,7 @@ export default function AdminCompras() {
 
       {/* --- MODAL REGISTRAR COMPRA --- */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-2xs flex items-center justify-center z-[60] p-3 sm:p-4 overscroll-contain animate-in fade-in duration-150">
+        <div onClick={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }} className="fixed inset-0 bg-black/50 backdrop-blur-2xs flex items-center justify-center z-[60] p-3 sm:p-4 overscroll-contain animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden max-h-[92vh] flex flex-col border border-patilla-border overscroll-contain">
             <div className="p-4 sm:p-5 border-b border-patilla-border flex justify-between items-center bg-gray-50 shrink-0">
               <h3 className="font-bold text-gray-800 text-sm sm:text-base flex items-center gap-2">

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import { pagosService, authService } from '../services/api';
+import { formatearFecha } from '../utils/fechas';
 import { 
   Users, 
   DollarSign, 
@@ -60,11 +61,14 @@ export default function AdminPagos() {
   useEffect(() => {
     if (isModalOpen || isModalUsuarioOpen) {
       document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = 'unset';
     }
     return () => {
       document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = 'unset';
     };
   }, [isModalOpen, isModalUsuarioOpen]);
 
@@ -238,12 +242,6 @@ export default function AdminPagos() {
     }).format(monto || 0);
   };
 
-  const formatearFecha = (fechaValor) => {
-    if (!fechaValor) return '-';
-    const fecha = new Date(fechaValor);
-    return isNaN(fecha.getTime()) ? '-' : fecha.toLocaleDateString('es-CO');
-  };
-
   const totalPagos = listadoPagos.reduce((acc, curr) => acc + (Number(curr?.monto) || 0), 0);
 
   const obtenerTotalPagadoAColaborador = (colaboradorId) => {
@@ -355,7 +353,7 @@ export default function AdminPagos() {
             <div className="bg-white border border-patilla-border rounded-2xl p-12 text-center text-gray-400">
               <Users size={36} className="mx-auto mb-3 text-gray-300" />
               <p className="text-sm font-bold text-gray-600 mb-1">No hay colaboradores registrados para este filtro.</p>
-              <p className="text-xs text-gray-400">Haz clic en "Nuevo Colaborador" para vincular personal al equipo.</p>
+              <p className="text-xs text-gray-400">Haz clic en &quot;Nuevo Colaborador&quot; para vincular personal al equipo.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -537,7 +535,7 @@ export default function AdminPagos() {
 
       {/* --- MODAL 1: REGISTRAR PAGO --- */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-2xs flex items-center justify-center z-[60] p-3 sm:p-4 overscroll-contain animate-in fade-in duration-150">
+        <div onClick={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }} className="fixed inset-0 bg-black/50 backdrop-blur-2xs flex items-center justify-center z-[60] p-3 sm:p-4 overscroll-contain animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden max-h-[92vh] flex flex-col border border-patilla-border overscroll-contain">
             <div className="p-4 sm:p-5 border-b border-patilla-border flex justify-between items-center bg-gray-50 shrink-0">
               <h3 className="font-bold text-gray-800 text-sm sm:text-base flex items-center gap-2">
@@ -626,7 +624,7 @@ export default function AdminPagos() {
 
       {/* --- MODAL 2: REGISTRAR NUEVO COLABORADOR --- */}
       {isModalUsuarioOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-2xs flex items-center justify-center z-[60] p-3 sm:p-4 overscroll-contain animate-in fade-in duration-150">
+        <div onClick={(e) => { if (e.target === e.currentTarget) setIsModalUsuarioOpen(false); }} className="fixed inset-0 bg-black/50 backdrop-blur-2xs flex items-center justify-center z-[60] p-3 sm:p-4 overscroll-contain animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden max-h-[92vh] flex flex-col border border-patilla-border overscroll-contain">
             <div className="p-4 sm:p-5 border-b border-patilla-border flex justify-between items-center bg-gray-50 shrink-0">
               <h3 className="font-bold text-gray-800 text-sm sm:text-base flex items-center gap-2">

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import { ventasService } from '../services/api';
+import { formatearFecha } from '../utils/fechas';
 import { 
   ReceiptText, 
   RefreshCw, 
@@ -40,37 +41,35 @@ export default function AdminVentas() {
   useEffect(() => {
     if (isModalOpen) {
       document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = 'unset';
     }
     return () => {
       document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = 'unset';
     };
   }, [isModalOpen]);
 
-  const cargarVentas = async (localId) => {
+  const cargarVentas = async () => {
     setLoading(true);
     setError('');
     try {
-      const response = await ventasService.obtenerHistorial(localId ? Number(localId) : null);
-      setVentas(response.data || []);
+      const res = await ventasService.obtenerTodas(filtroLocal ? Number(filtroLocal) : undefined);
+      setVentas(res.data || []);
       setPaginaActual(1);
     } catch (err) {
       console.error('Error al cargar ventas:', err);
-      setError('No se pudo cargar el historial de ventas.');
+      setError('Error al cargar el historial de ventas.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    cargarVentas(filtroLocal);
+    cargarVentas();
   }, [filtroLocal]);
-
-  const handleVerDetalle = (venta) => {
-    setVentaSeleccionada(venta);
-    setIsModalOpen(true);
-  };
 
   const formatearDinero = (monto) => {
     return new Intl.NumberFormat('es-CO', {
@@ -80,122 +79,149 @@ export default function AdminVentas() {
     }).format(monto || 0);
   };
 
-  const totalVentas = ventas.reduce((acc, curr) => acc + (curr.totalGeneral || 0), 0);
-  const totalEfectivo = ventas.reduce((acc, curr) => acc + (curr.totalEfectivo || 0), 0);
-  const totalTransferencia = ventas.reduce((acc, curr) => acc + (curr.totalTransferencia || 0), 0);
+  const handleVerDetalle = (venta) => {
+    setVentaSeleccionada(venta);
+    setIsModalOpen(true);
+  };
 
-  // Paginación calculada
+  // Métricas generales
+  const totalCajaGlobal = ventas.reduce((acc, v) => acc + (v.totalGeneral || 0), 0);
+  const totalEfectivoGlobal = ventas.reduce((acc, v) => acc + (v.totalEfectivo || 0), 0);
+  const totalTransfGlobal = ventas.reduce((acc, v) => acc + (v.totalTransferencia || 0), 0);
+
+  // Cálculos para el modal de detalle auditado
+  const totalCajaReportado = ventaSeleccionada 
+    ? (Number(ventaSeleccionada.totalEfectivo) || 0) + (Number(ventaSeleccionada.totalTransferencia) || 0)
+    : 0;
+
+  const totalProductosVendidos = ventaSeleccionada?.detalles?.reduce(
+    (acc, d) => acc + (Number(d.subtotal) || 0), 
+    0
+  ) || 0;
+
+  const diferenciaCuadre = totalCajaReportado - totalProductosVendidos;
+
+  // Lógica de Paginación
   const totalPaginas = Math.ceil(ventas.length / ITEMS_POR_PAGINA) || 1;
   const ventasPaginadas = ventas.slice(
     (paginaActual - 1) * ITEMS_POR_PAGINA,
     paginaActual * ITEMS_POR_PAGINA
   );
 
-  // Cálculos para el modal seleccionado
-  const totalProductosVendidos = ventaSeleccionada?.detalles?.reduce((acc, curr) => acc + (curr.subtotal || 0), 0) || 0;
-  const totalCajaReportado = ventaSeleccionada ? (ventaSeleccionada.totalGeneral || (ventaSeleccionada.totalEfectivo + ventaSeleccionada.totalTransferencia)) : 0;
-  const diferenciaCuadre = totalCajaReportado - totalProductosVendidos;
-
   return (
-    <AdminLayout
-      title="Cierres de Ventas Diarias"
-      subtitle="Auditoría y detalle de turnos, productos vendidos e insumos consumidos"
-    >
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs sm:text-sm">
-          {error}
-        </div>
-      )}
-
-      {/* Tarjetas Resumen */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white border border-patilla-border rounded-2xl p-4 flex items-center justify-between shadow-2xs">
-          <div>
-            <p className="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Total Recaudado</p>
-            <p className="text-xl sm:text-2xl font-black text-gray-800">{formatearDinero(totalVentas)}</p>
-          </div>
-          <div className="p-3 bg-patilla-secondary/40 rounded-xl text-green-800">
-            <TrendingUp size={22} />
-          </div>
+    <AdminLayout>
+      {/* Header & Filtros */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <ReceiptText className="text-patilla-primary" /> Historial de Turnos y Ventas Diarias
+          </h1>
+          <p className="text-xs sm:text-sm text-gray-500">
+            Control integral de cierres de caja y auditoría por punto de venta
+          </p>
         </div>
 
-        <div className="bg-white border border-patilla-border rounded-2xl p-4 flex items-center justify-between shadow-2xs">
-          <div>
-            <p className="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Efectivo en Caja</p>
-            <p className="text-xl sm:text-2xl font-black text-gray-800">{formatearDinero(totalEfectivo)}</p>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2 bg-white border border-patilla-border px-3 py-2 rounded-xl flex-1 sm:flex-initial">
+            <Building2 size={16} className="text-gray-400" />
+            <select
+              value={filtroLocal}
+              onChange={(e) => setFiltroLocal(e.target.value)}
+              className="text-xs font-semibold bg-transparent outline-none cursor-pointer text-gray-700 w-full"
+            >
+              <option value="">Todas las Sedes</option>
+              <option value="1">Punto de la 30</option>
+              <option value="2">Punto de la 27</option>
+            </select>
           </div>
-          <div className="p-3 bg-green-50 rounded-xl text-green-700 border border-green-200">
-            <Banknote size={22} />
-          </div>
-        </div>
 
-        <div className="bg-white border border-patilla-border rounded-2xl p-4 flex items-center justify-between shadow-2xs">
-          <div>
-            <p className="text-[11px] text-gray-500 font-bold uppercase tracking-wider">Transferencias</p>
-            <p className="text-xl sm:text-2xl font-black text-gray-800">{formatearDinero(totalTransferencia)}</p>
-          </div>
-          <div className="p-3 bg-blue-50 rounded-xl text-blue-700 border border-blue-200">
-            <CreditCard size={22} />
-          </div>
-        </div>
-      </div>
-
-      {/* Filtro por Sede */}
-      <div className="bg-white border border-patilla-border rounded-2xl p-4 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-2xs">
-        <div className="flex items-center gap-2">
-          <ReceiptText size={18} className="text-gray-500" />
-          <h3 className="font-bold text-gray-800 text-sm sm:text-base">Historial de Cierres de Turno</h3>
-        </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <label className="text-xs font-bold text-gray-700 shrink-0">Filtrar Sede:</label>
-          <select
-            value={filtroLocal}
-            onChange={(e) => setFiltroLocal(e.target.value)}
-            className="flex-1 sm:flex-none p-2.5 border border-patilla-border rounded-xl text-xs sm:text-sm bg-patilla-bg outline-none font-bold text-gray-800 shadow-2xs"
-          >
-            <option value="">Todas las sedes</option>
-            <option value="1">Sede Centro (#1)</option>
-            <option value="2">Sede Norte (#2)</option>
-          </select>
           <button
-            onClick={() => cargarVentas(filtroLocal)}
+            onClick={cargarVentas}
             disabled={loading}
+            className="p-2.5 bg-white border border-patilla-border hover:bg-gray-50 text-gray-700 rounded-xl transition-all shadow-2xs cursor-pointer flex items-center justify-center font-bold text-xs"
             title="Recargar ventas"
-            className="p-2.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-colors shrink-0 cursor-pointer"
           >
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>
 
-      {/* Tabla Responsiva de Cierres */}
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
+        <div className="bg-white border border-patilla-border p-4 rounded-2xl shadow-2xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">Total Recaudado</span>
+            <span className="text-xl sm:text-2xl font-black text-gray-800">{formatearDinero(totalCajaGlobal)}</span>
+          </div>
+          <div className="p-3 bg-green-50 text-green-700 rounded-xl">
+            <TrendingUp size={22} />
+          </div>
+        </div>
+
+        <div className="bg-white border border-patilla-border p-4 rounded-2xl shadow-2xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">Total en Efectivo</span>
+            <span className="text-xl sm:text-2xl font-black text-green-700">{formatearDinero(totalEfectivoGlobal)}</span>
+          </div>
+          <div className="p-3 bg-emerald-50 text-emerald-700 rounded-xl">
+            <Banknote size={22} />
+          </div>
+        </div>
+
+        <div className="bg-white border border-patilla-border p-4 rounded-2xl shadow-2xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">Total Transferencias</span>
+            <span className="text-xl sm:text-2xl font-black text-blue-700">{formatearDinero(totalTransfGlobal)}</span>
+          </div>
+          <div className="p-3 bg-blue-50 text-blue-700 rounded-xl">
+            <CreditCard size={22} />
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-xs font-semibold mb-6 flex items-center gap-2">
+          <AlertTriangle size={16} />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Tabla Registros */}
       <div className="bg-white border border-patilla-border rounded-2xl overflow-hidden shadow-2xs">
+        <div className="p-4 border-b border-patilla-border flex items-center justify-between bg-gray-50/50">
+          <h2 className="font-bold text-gray-800 text-sm sm:text-base">
+            Cierres Registrados ({ventas.length})
+          </h2>
+          <span className="text-xs text-gray-500 font-semibold">
+            Página {paginaActual} de {totalPaginas}
+          </span>
+        </div>
+
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[620px]">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-patilla-bg text-[11px] text-gray-500 uppercase tracking-wider">
-                <th className="p-3.5 font-bold">Fecha</th>
-                <th className="p-3.5 font-bold">Sede</th>
-                <th className="p-3.5 font-bold">Vendedor</th>
-                <th className="p-3.5 font-bold text-right">Efectivo</th>
-                <th className="p-3.5 font-bold text-right">Transferencia</th>
-                <th className="p-3.5 font-bold text-right">Total Turno</th>
-                <th className="p-3.5 font-bold text-center">Auditoría</th>
+              <tr className="border-b border-patilla-border bg-patilla-bg/60 text-gray-500 text-[11px] font-bold uppercase tracking-wider">
+                <th className="p-3.5">Fecha</th>
+                <th className="p-3.5">Sede</th>
+                <th className="p-3.5">Vendedor</th>
+                <th className="p-3.5 text-right">Efectivo</th>
+                <th className="p-3.5 text-right">Transferencia</th>
+                <th className="p-3.5 text-right">Total Turno</th>
+                <th className="p-3.5 text-center">Acciones</th>
               </tr>
             </thead>
-            <tbody className="text-sm">
+            <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="p-8 text-center text-gray-400">
-                    <RefreshCw size={24} className="animate-spin mx-auto mb-2 text-gray-400" />
+                  <td colSpan="7" className="p-12 text-center text-gray-400">
+                    <RefreshCw size={24} className="animate-spin mx-auto mb-2" />
                     Cargando ventas...
                   </td>
                 </tr>
               ) : ventas.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="p-8 text-center text-gray-400">
-                    <ReceiptText size={28} className="mx-auto mb-2 text-gray-300" />
-                    No hay ventas registradas en este local.
+                  <td colSpan="7" className="p-12 text-center text-gray-400">
+                    No se encontraron registros de ventas.
                   </td>
                 </tr>
               ) : (
@@ -204,7 +230,7 @@ export default function AdminVentas() {
                     <td className="p-3.5 text-gray-600 text-xs">
                       <div className="flex items-center gap-1.5">
                         <Calendar size={14} className="text-gray-400" />
-                        <span>{new Date(v.fecha).toLocaleDateString('es-CO')}</span>
+                        <span>{formatearFecha(v.fecha)}</span>
                       </div>
                     </td>
                     <td className="p-3.5 font-bold text-gray-800 text-xs sm:text-sm">{v.nombreLocal}</td>
@@ -258,7 +284,7 @@ export default function AdminVentas() {
 
       {/* --- MODAL DETALLE DE VENTA --- */}
       {isModalOpen && ventaSeleccionada && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-2xs flex items-center justify-center z-[60] p-3 sm:p-4 overscroll-contain animate-in fade-in duration-150">
+        <div onClick={(e) => { if (e.target === e.currentTarget) { setIsModalOpen(false); setVentaSeleccionada(null); } }} className="fixed inset-0 bg-black/50 backdrop-blur-2xs flex items-center justify-center z-[60] p-3 sm:p-4 overscroll-contain animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col border border-patilla-border overscroll-contain">
             <div className="p-4 sm:p-5 border-b border-patilla-border flex justify-between items-center bg-gray-50 shrink-0">
               <div>
@@ -266,7 +292,7 @@ export default function AdminVentas() {
                   <ReceiptText size={18} className="text-patilla-primary" /> Auditoría de Cierre — Reporte #{ventaSeleccionada.id}
                 </h3>
                 <p className="text-[11px] text-gray-500">
-                  {ventaSeleccionada.nombreLocal} • Vendedor: <strong>{ventaSeleccionada.nombreVendedor}</strong> • {new Date(ventaSeleccionada.fecha).toLocaleDateString('es-CO')}
+                  {ventaSeleccionada.nombreLocal} • Vendedor: <strong>{ventaSeleccionada.nombreVendedor}</strong> • {formatearFecha(ventaSeleccionada.fecha)}
                 </p>
               </div>
               <button

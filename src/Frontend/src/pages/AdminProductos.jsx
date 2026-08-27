@@ -47,15 +47,18 @@ export default function AdminProductos() {
     }, 4000);
   };
 
-  // Bloqueo de scroll cuando el modal está abierto
+  // Bloqueo de scroll completo cuando el modal está abierto para mobile
   useEffect(() => {
     if (isModalOpen) {
       document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = 'unset';
     }
     return () => {
       document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = 'unset';
     };
   }, [isModalOpen]);
 
@@ -63,12 +66,11 @@ export default function AdminProductos() {
     setLoading(true);
     setError('');
     try {
-      // Obtenemos todos (incluyendo inactivos para gestión de admin)
-      const res = await productosService.obtenerTodos();
+      const res = await productosService.obtenerTodos(true); // Incluir inactivos
       setProductos(res.data || []);
     } catch (err) {
-      console.error('Error al cargar productos:', err);
-      setError('No se pudo conectar con el catálogo de productos.');
+      console.error('Error al cargar catálogo de productos:', err);
+      setError('No se pudo cargar el listado de productos.');
     } finally {
       setLoading(false);
     }
@@ -78,7 +80,7 @@ export default function AdminProductos() {
     cargarProductos();
   }, []);
 
-  const abrirModalCreacion = () => {
+  const abrirModalCrear = () => {
     setModoEdicion(false);
     setProductoEditandoId(null);
     setFormData({
@@ -91,46 +93,29 @@ export default function AdminProductos() {
     setIsModalOpen(true);
   };
 
-  const abrirModalEdicion = (prod) => {
+  const abrirModalEditar = (prod) => {
     setModoEdicion(true);
     setProductoEditandoId(prod.id);
     setFormData({
       nombre: prod.nombre,
       precioBase: prod.precioBase.toString(),
-      categoria: prod.categoria || 'General',
+      categoria: prod.categoria || 'Bebidas',
       activo: prod.activo,
     });
     setFormError('');
     setIsModalOpen(true);
   };
 
-  const handleToggleEstado = async (prod) => {
-    try {
-      await productosService.cambiarEstado(prod.id);
-      setProductos(prev => prev.map(p => p.id === prod.id ? { ...p, activo: !p.activo } : p));
-      mostrarToast(
-        `Producto "${prod.nombre}" ahora está ${!prod.activo ? 'activo' : 'desactivado'}.`,
-        'success'
-      );
-    } catch (err) {
-      console.error('Error al cambiar estado del producto:', err);
-      mostrarToast('No se pudo actualizar el estado del producto.', 'error');
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFormError('');
 
-    const nombreLimpio = formData.nombre.trim();
-    const precio = Number(formData.precioBase);
-
-    if (!nombreLimpio) {
-      setFormError('Ingresa el nombre del producto.');
+    if (!formData.nombre.trim()) {
+      setFormError('El nombre del producto es obligatorio.');
       return;
     }
-    if (!precio || precio <= 0) {
-      setFormError('Ingresa un precio de venta mayor a $0.');
+    if (!formData.precioBase || Number(formData.precioBase) <= 0) {
+      setFormError('El precio debe ser un número mayor a cero.');
       return;
     }
 
@@ -138,32 +123,39 @@ export default function AdminProductos() {
     try {
       if (modoEdicion) {
         await productosService.actualizar(productoEditandoId, {
-          nombre: nombreLimpio,
-          precioBase: precio,
-          categoria: formData.categoria.trim() || 'General',
+          nombre: formData.nombre.trim(),
+          precioBase: Number(formData.precioBase),
+          categoria: formData.categoria,
           activo: formData.activo,
         });
-        mostrarToast('¡Producto actualizado exitosamente!', 'success');
+        mostrarToast('Producto actualizado correctamente con éxito.');
       } else {
         await productosService.crear({
-          nombre: nombreLimpio,
-          precioBase: precio,
-          categoria: formData.categoria.trim() || 'General',
+          nombre: formData.nombre.trim(),
+          precioBase: Number(formData.precioBase),
+          categoria: formData.categoria,
         });
-        mostrarToast('¡Nuevo producto agregado al catálogo!', 'success');
+        mostrarToast('Nuevo producto registrado exitosamente en el catálogo.');
       }
 
       setIsModalOpen(false);
       cargarProductos();
     } catch (err) {
       console.error('Error al guardar producto:', err);
-      if (err.response?.data?.detail) {
-        setFormError(err.response.data.detail);
-      } else {
-        setFormError('Ocurrió un problema al guardar el producto.');
-      }
+      setFormError(err.response?.data?.detail || err.response?.data?.message || 'Error al procesar el producto.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const alternarEstado = async (prod) => {
+    try {
+      await productosService.cambiarEstado(prod.id);
+      mostrarToast(`Producto ${prod.activo ? 'desactivado' : 'activado'} correctamente.`);
+      cargarProductos();
+    } catch (err) {
+      console.error('Error al cambiar estado:', err);
+      mostrarToast('No se pudo cambiar el estado del producto.', 'error');
     }
   };
 
@@ -175,211 +167,206 @@ export default function AdminProductos() {
     }).format(monto || 0);
   };
 
-  // Categorías únicas para filtro
-  const categoriasUnicas = Array.from(new Set(productos.map(p => p.categoria || 'General')));
+  // Categorías fijas y dinámicas
+  const categorias = ['Todas', 'Bebidas', 'Fritos', 'Snacks', 'General'];
 
-  // Productos filtrados según búsqueda y categoría
+  // Filtrado de productos
   const productosFiltrados = productos.filter(p => {
-    const coincideTexto = p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-                          p.categoria.toLowerCase().includes(busqueda.toLowerCase());
-    const coincideCat = filtroCategoria ? p.categoria === filtroCategoria : true;
-    return coincideTexto && coincideCat;
+    const matchBusqueda = p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+                          p.categoria?.toLowerCase().includes(busqueda.toLowerCase());
+    const matchCategoria = !filtroCategoria || filtroCategoria === 'Todas' || p.categoria === filtroCategoria;
+    return matchBusqueda && matchCategoria;
   });
 
-  const getProductIcon = (nombre, categoria) => {
-    const n = (nombre || '').toLowerCase();
-    const c = (categoria || '').toLowerCase();
-    if (n.includes('vaso') || c.includes('bebida') || n.includes('patilla') || n.includes('jugo')) return '🍉';
-    if (n.includes('dedito') || n.includes('pastelito') || n.includes('empanada') || c.includes('frito')) return '🥟';
-    if (n.includes('galleta') || c.includes('snack')) return '🍪';
-    return '🥤';
-  };
+  const totalActivos = productos.filter(p => p.activo).length;
 
   return (
     <AdminLayout
-      title="Productos y Precios de Venta"
-      subtitle="Catálogo de venta al público sincronizado en vivo con los puntos de venta"
+      title="Catálogo de Productos y Precios"
+      subtitle="Define los productos de venta y sus precios para el registro eficiente de ventas"
       actionButton={
         <button
-          onClick={abrirModalCreacion}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-patilla-primary hover:bg-patilla-primary-hover text-gray-900 text-xs sm:text-sm font-black rounded-xl transition-transform active:scale-95 shadow-2xs cursor-pointer"
+          onClick={abrirModalCrear}
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-patilla-primary hover:bg-patilla-primary-hover text-gray-900 text-xs sm:text-sm font-black rounded-xl transition-all active:scale-95 shadow-2xs cursor-pointer"
         >
           <Plus size={16} />
           Nuevo Producto
         </button>
       }
     >
-      {/* Toast Notification */}
+      {/* Toast Notificación */}
       {toast.visible && (
-        <div className="fixed top-4 inset-x-4 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 z-50 max-w-sm animate-in fade-in slide-in-from-top-4 duration-200">
-          <div className={`p-4 rounded-xl shadow-2xl border flex items-center justify-between gap-3 ${
-            toast.tipo === 'success' ? 'bg-green-800 text-white border-green-600' : 'bg-red-800 text-white border-red-600'
-          }`}>
-            <div className="flex items-center gap-2.5">
-              <CheckCircle2 size={20} className="text-green-300 shrink-0" />
-              <span className="text-xs sm:text-sm font-semibold">{toast.mensaje}</span>
-            </div>
-            <button onClick={() => setToast(prev => ({ ...prev, visible: false }))} className="text-white/80 hover:text-white p-1">
-              <X size={16} />
-            </button>
-          </div>
+        <div className={`mb-4 p-3.5 rounded-xl border text-xs sm:text-sm font-bold flex items-center gap-2 transition-all animate-in fade-in shadow-2xs ${
+          toast.tipo === 'error' 
+            ? 'bg-red-50 text-red-700 border-red-200' 
+            : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+        }`}>
+          {toast.tipo === 'error' ? <AlertCircle size={16} /> : <CheckCircle2 size={16} className="text-emerald-600" />}
+          <span>{toast.mensaje}</span>
         </div>
       )}
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs sm:text-sm flex items-center gap-2">
-          <AlertCircle size={16} /> {error}
+        <div className="mb-4 p-3.5 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2">
+          <AlertCircle size={16} />
+          <span>{error}</span>
         </div>
       )}
 
-      {/* Tarjetas KPI Superiores */}
+      {/* KPI Barra Superior */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
-        <div className="bg-white border border-patilla-border rounded-2xl p-4 shadow-2xs">
-          <div className="flex items-center gap-2 text-gray-500 mb-1">
-            <ShoppingBag size={16} className="text-patilla-primary" />
-            <span className="text-[11px] font-bold uppercase tracking-wider">Total Productos</span>
+        <div className="bg-white border border-patilla-border p-4 rounded-2xl shadow-2xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Catálogo Activo</span>
+            <span className="text-xl sm:text-2xl font-black text-gray-800">{totalActivos} productos</span>
           </div>
-          <span className="text-2xl font-black text-gray-800">{productos.length}</span>
+          <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-xl">
+            <ShoppingBag size={20} />
+          </div>
         </div>
 
-        <div className="bg-white border border-patilla-border rounded-2xl p-4 shadow-2xs">
-          <div className="flex items-center gap-2 text-green-600 mb-1">
-            <CheckCircle2 size={16} />
-            <span className="text-[11px] font-bold uppercase tracking-wider">Activos en Caja</span>
+        <div className="bg-white border border-patilla-border p-4 rounded-2xl shadow-2xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Total Registrados</span>
+            <span className="text-xl sm:text-2xl font-black text-gray-800">{productos.length}</span>
           </div>
-          <span className="text-2xl font-black text-green-700">
-            {productos.filter(p => p.activo).length}
-          </span>
+          <div className="p-2.5 bg-blue-50 text-blue-700 rounded-xl">
+            <Tag size={20} />
+          </div>
         </div>
 
-        <div className="col-span-2 sm:col-span-1 bg-white border border-patilla-border rounded-2xl p-4 shadow-2xs">
-          <div className="flex items-center gap-2 text-gray-500 mb-1">
-            <Tag size={16} className="text-blue-500" />
-            <span className="text-[11px] font-bold uppercase tracking-wider">Categorías</span>
+        <div className="col-span-2 sm:col-span-1 bg-white border border-patilla-border p-4 rounded-2xl shadow-2xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Precios Rango</span>
+            <span className="text-base sm:text-lg font-black text-gray-700">
+              {productos.length > 0
+                ? `${formatearDinero(Math.min(...productos.map(p => p.precioBase)))} - ${formatearDinero(Math.max(...productos.map(p => p.precioBase)))}`
+                : '$0'}
+            </span>
           </div>
-          <span className="text-2xl font-black text-gray-800">{categoriasUnicas.length}</span>
+          <div className="p-2.5 bg-patilla-primary/30 text-gray-800 rounded-xl">
+            <DollarSign size={20} />
+          </div>
         </div>
       </div>
 
-      {/* Barra de Filtros y Búsqueda */}
-      <div className="bg-white border border-patilla-border rounded-2xl p-4 mb-6 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xs">
-        <div className="relative w-full sm:w-72">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+      {/* Barra de Búsqueda y Categorías */}
+      <div className="bg-white border border-patilla-border rounded-2xl p-4 mb-6 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        {/* Buscador */}
+        <div className="relative flex-1">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Buscar por producto..."
+            placeholder="Buscar producto por nombre (ej. 16oz, Empanada)..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 bg-patilla-bg border border-patilla-border rounded-xl text-xs sm:text-sm font-semibold outline-none focus:bg-white focus:border-gray-400 transition-colors"
+            className="w-full pl-10 pr-4 py-2.5 bg-patilla-bg border border-patilla-border rounded-xl text-xs sm:text-sm font-medium outline-none focus:bg-white focus:border-gray-400 transition-colors"
           />
+          {busqueda && (
+            <button
+              onClick={() => setBusqueda('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <select
-            value={filtroCategoria}
-            onChange={(e) => setFiltroCategoria(e.target.value)}
-            aria-label="Filtrar por categoría"
-            className="flex-1 sm:flex-none py-2.5 px-3 bg-patilla-bg border border-patilla-border rounded-xl text-xs font-bold text-gray-700 outline-none"
-          >
-            <option value="">Todas las Categorías</option>
-            {categoriasUnicas.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
+        {/* Botones de Categorías */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+          {categorias.map(cat => {
+            const activo = (filtroCategoria === '' && cat === 'Todas') || filtroCategoria === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() => setFiltroCategoria(cat === 'Todas' ? '' : cat)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  activo 
+                    ? 'bg-gray-900 text-white shadow-2xs' 
+                    : 'bg-patilla-bg border border-patilla-border text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                {cat}
+              </button>
+            );
+          })}
 
           <button
             onClick={cargarProductos}
             disabled={loading}
             title="Recargar catálogo"
-            className="p-2.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors shrink-0 cursor-pointer"
+            className="p-2 text-gray-400 hover:text-gray-700 rounded-xl hover:bg-gray-100 transition-colors shrink-0 ml-1 cursor-pointer"
           >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={15} className={loading ? 'animate-spin text-gray-600' : ''} />
           </button>
         </div>
       </div>
 
-      {/* Grid Dinámico de Productos (Adaptado Mobile & PC) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Grid de Tarjetas de Productos */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {loading ? (
-          <div className="col-span-full py-16 text-center text-gray-400">
-            <RefreshCw size={24} className="animate-spin mx-auto mb-2 text-gray-400" />
-            <p className="text-xs">Cargando catálogo de productos...</p>
+          <div className="col-span-full bg-white border border-patilla-border rounded-2xl p-12 text-center text-gray-400">
+            <RefreshCw size={28} className="animate-spin mx-auto mb-2 text-patilla-primary" />
+            Cargando catálogo de productos...
           </div>
         ) : productosFiltrados.length === 0 ? (
-          <div className="col-span-full py-16 text-center text-gray-400 bg-white rounded-2xl border border-patilla-border p-6">
+          <div className="col-span-full bg-white border border-patilla-border rounded-2xl p-12 text-center text-gray-400">
             <ShoppingBag size={32} className="mx-auto mb-2 text-gray-300" />
-            <p className="text-sm font-bold text-gray-600">No se encontraron productos.</p>
-            <p className="text-xs text-gray-400 mt-1">Crea tu primer producto con el botón de arriba.</p>
+            No se encontraron productos coincidentes.
           </div>
         ) : (
           productosFiltrados.map((prod) => {
-            const icon = getProductIcon(prod.nombre, prod.categoria);
             return (
               <div
                 key={prod.id}
-                className={`bg-white border rounded-2xl p-4 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between gap-3 relative ${
-                  prod.activo ? 'border-patilla-border' : 'border-gray-200 opacity-60 bg-gray-50/50'
+                className={`bg-white border rounded-2xl p-4 flex flex-col justify-between transition-all shadow-2xs hover:shadow-sm ${
+                  prod.activo 
+                    ? 'border-patilla-border' 
+                    : 'border-dashed border-gray-300 opacity-60 bg-gray-50/50'
                 }`}
               >
-                {/* Encabezado del Producto */}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-3">
-                    <span className="text-3xl p-2 bg-patilla-bg rounded-xl shrink-0 select-none">
-                      {icon}
+                <div>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-patilla-bg border border-patilla-border text-gray-600">
+                      {prod.categoria || 'General'}
                     </span>
-                    <div>
-                      <h3 className="font-extrabold text-gray-900 text-sm sm:text-base leading-tight">
-                        {prod.nombre}
-                      </h3>
-                      <span className="inline-block mt-0.5 text-[10px] font-extrabold uppercase px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md">
-                        {prod.categoria}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Estado Activo / Inactivo */}
-                  <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0 border ${
-                    prod.activo 
-                      ? 'bg-green-100 text-green-800 border-green-200' 
-                      : 'bg-gray-200 text-gray-600 border-gray-300'
-                  }`}>
-                    {prod.activo ? 'Activo' : 'Inactivo'}
-                  </span>
-                </div>
-
-                {/* Precio y Botones de Acción */}
-                <div className="pt-2 border-t border-patilla-border flex items-center justify-between gap-2">
-                  <div>
-                    <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wider">Precio Venta</span>
-                    <span className="text-lg sm:text-xl font-black text-gray-900">
-                      {formatearDinero(prod.precioBase)}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    {/* Botón Editar Precio / Datos */}
                     <button
-                      onClick={() => abrirModalEdicion(prod)}
-                      title="Editar producto"
-                      className="px-3 py-2 bg-gray-100 hover:bg-patilla-primary text-gray-700 hover:text-gray-900 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 border border-patilla-border cursor-pointer active:scale-95 shadow-2xs"
-                    >
-                      <Edit2 size={13} />
-                      <span>Editar</span>
-                    </button>
-
-                    {/* Botón Switch Activar / Desactivar */}
-                    <button
-                      onClick={() => handleToggleEstado(prod)}
-                      title={prod.activo ? 'Desactivar en puntos de venta' : 'Activar en puntos de venta'}
-                      className={`p-2 rounded-xl border transition-colors cursor-pointer active:scale-95 shadow-2xs ${
-                        prod.activo
-                          ? 'bg-white hover:bg-red-50 text-gray-400 hover:text-red-600 border-patilla-border'
-                          : 'bg-white hover:bg-green-50 text-gray-400 hover:text-green-600 border-patilla-border'
+                      onClick={() => alternarEstado(prod)}
+                      title={prod.activo ? 'Clic para desactivar' : 'Clic para activar'}
+                      className={`text-[11px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 transition-colors cursor-pointer ${
+                        prod.activo 
+                          ? 'bg-emerald-50 text-emerald-700 hover:bg-red-50 hover:text-red-700' 
+                          : 'bg-gray-200 text-gray-600 hover:bg-emerald-50 hover:text-emerald-700'
                       }`}
                     >
-                      {prod.activo ? <XCircle size={16} /> : <CheckCircle2 size={16} />}
+                      {prod.activo ? (
+                        <>
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Activo
+                        </>
+                      ) : (
+                        <>
+                          <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span> Inactivo
+                        </>
+                      )}
                     </button>
                   </div>
+
+                  <h3 className="font-black text-gray-800 text-base mb-1" title={prod.nombre}>
+                    {prod.nombre}
+                  </h3>
+                  <div className="font-black text-xl text-gray-900 mb-4">
+                    {formatearDinero(prod.precioBase)}
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-patilla-border flex items-center justify-between gap-2">
+                  <span className="text-[11px] text-gray-400 font-medium">#{prod.id}</span>
+                  <button
+                    onClick={() => abrirModalEditar(prod)}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-700 hover:text-gray-900 bg-gray-100 hover:bg-patilla-primary/40 px-3 py-1.5 rounded-xl transition-all cursor-pointer active:scale-95 shadow-2xs"
+                  >
+                    <Edit2 size={13} /> Editar Producto
+                  </button>
                 </div>
               </div>
             );
@@ -389,8 +376,11 @@ export default function AdminProductos() {
 
       {/* Modal Crear / Editar Producto */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-2xs flex items-center justify-center z-[60] p-3 sm:p-4 overscroll-contain animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden max-h-[92vh] flex flex-col border border-patilla-border">
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }}
+          className="fixed inset-0 bg-black/50 backdrop-blur-2xs flex items-center justify-center z-[60] p-3 sm:p-4 overscroll-contain animate-in fade-in duration-150"
+        >
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden max-h-[92vh] flex flex-col border border-patilla-border overscroll-contain">
             <div className="p-4 sm:p-5 border-b border-patilla-border flex justify-between items-center bg-gray-50 shrink-0">
               <h3 className="font-bold text-gray-800 text-sm sm:text-base flex items-center gap-2">
                 <ShoppingBag size={18} className="text-patilla-primary" />
@@ -404,7 +394,7 @@ export default function AdminProductos() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 overflow-y-auto">
+            <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 overflow-y-auto overscroll-contain touch-pan-y flex-1">
               {formError && (
                 <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs flex items-center gap-2">
                   <AlertCircle size={15} /> {formError}

@@ -40,11 +40,14 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (isBiModalOpen) {
       document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = 'unset';
     }
     return () => {
       document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = 'unset';
     };
   }, [isBiModalOpen]);
 
@@ -584,7 +587,7 @@ export default function AdminDashboard() {
       {/* MODAL BUSINESS INTELLIGENCE (BI) & ANALÍTICA DE VENTAS      */}
       {/* ============================================================ */}
       {isBiModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-2xs flex items-center justify-center z-[60] p-3 sm:p-5 overscroll-contain animate-in fade-in duration-200">
+        <div onClick={(e) => { if (e.target === e.currentTarget) setIsBiModalOpen(false); }} className="fixed inset-0 bg-black/50 backdrop-blur-2xs flex items-center justify-center z-[60] p-3 sm:p-5 overscroll-contain animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden max-h-[92vh] sm:max-h-[94vh] flex flex-col border border-patilla-border overscroll-contain">
             
             {/* Modal Header */}

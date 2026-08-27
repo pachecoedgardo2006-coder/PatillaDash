@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { ventasService, inventarioService, productosService } from '../services/api';
+import { formatearFecha } from '../utils/fechas';
 import { 
   LogOut, 
   RefreshCw, 
@@ -65,7 +66,7 @@ export default function VendedorDashboard() {
   // Consumo de Insumos Dinámico (key = suministroId, value = cantidad)
   const [consumos, setConsumos] = useState({});
 
-  const localId = user?.localId || 1;
+  const localId = Number(user?.localId) || 1;
 
   const cargarDatos = async () => {
     setLoading(true);
@@ -126,8 +127,7 @@ export default function VendedorDashboard() {
   };
 
   const handleConsumoChange = (suministroId, valor) => {
-    setConsumos(prev => ({
-      ...prev,
+    setConsumos(prev => ({ ...prev,
       [suministroId]: valor,
     }));
   };
@@ -197,7 +197,7 @@ export default function VendedorDashboard() {
 
     const payload = {
       localId: localId,
-      vendedorId: user?.usuarioId || 1,
+      vendedorId: Number(user?.usuarioId || user?.id) || 1,
       totalEfectivo: ef,
       totalTransferencia: tr,
       notas: notas.trim() || undefined,
@@ -711,14 +711,7 @@ export default function VendedorDashboard() {
                         <div className="flex items-center gap-2">
                           <Calendar size={15} className="text-gray-400" />
                           <span className="text-xs font-bold text-gray-800">
-                            {new Date(v.fecha).toLocaleDateString('es-CO', {
-                              weekday: 'short',
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
+                            {formatearFecha(v.fecha, true)}
                           </span>
                         </div>
                         <span className="text-sm font-black text-green-700">

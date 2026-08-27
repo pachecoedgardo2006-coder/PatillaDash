@@ -23,7 +23,7 @@ Bienvenido al repositorio central de **PatillaDash**, una solución web full-sta
    - [Panel del Administrador](#2-panel-del-administrador)
    - [Módulo de Business Intelligence (BI) y Analítica](#3-módulo-de-business-intelligence-bi-y-analítica)
    - [Flujo Directo de Reabastecimiento Crítico](#4-flujo-directo-de-reabastecimiento-crítico)
-   - [Experiencia Móvil Optimizada y Error Boundary](#5-experiencia-móvil-optimizada-y-error-boundary)
+   - [Experiencia Móvil Optimizada, Safari iOS y Resiliencia](#5-experiencia-móvil-optimizada-safari-ios-y-resiliencia)
 7. [Seguridad y Anti-Inyecciones SQL](#-seguridad-y-anti-inyecciones-sql)
 8. [Despliegue en la Nube y Costos Operativos ($0 USD)](#-despliegue-en-la-nube-y-costos-operativos-0-usd)
    - [Backend en Render](#backend-en-render-web-service)
@@ -49,8 +49,8 @@ El negocio de bebidas artesanales opera bajo el principio de **"Registro de Oper
 
 | Rol | Alcance | Vistas y Permisos Habilitados |
 | :--- | :--- | :--- |
-| **Vendedor** | Solo su local asignado (`LocalId`) | • **Formulario Asistido (Wizard 3 Pasos):** Efectivo, Transferencias, Productos Vendidos e Insumos consumidos del catálogo de la sede.<br>• **Mi Historial de Turnos:** Pestaña independiente paginada a 10 registros por página.<br>• **Toasts Flotantes:** Notificaciones fijas en la parte superior sin necesidad de scroll.<br>• **Mobile Friendly:** Prevención de auto-zoom en iOS Safari y teclado adaptativo. |
-| **Administrador** | Global (Todas las sedes) | • **Dashboard & BI:** Balance Neto, Ingresos, Gastos (Compras + Nómina), Alertas de Stock Crítico por Sede y **Modal Interactivo de Business Intelligence (BI)**.<br>• **Ventas y Cierres:** Historial general paginado (10 items) con **Auditoría de Cuadre** (Caja vs. Productos vendidos) y fechas estandarizadas.<br>• **Gestión de Productos:** Catálogo dinámico con activación/desactivación de ítems en 1 clic.<br>• **Inventario:** Stock en tiempo real, alertas de mínimo y ajuste manual.<br>• **Compras y Reabastecimiento:** Panel prioritario de insumos críticos con compras a 1-clic y suma automática a inventario.<br>• **Personal y Nómina:** Doble pestaña (**Colaboradores** con tarjetas de equipo, badge blindado y registro de pagos directos + **Historial de Nómina** con totales y filtros) + Modal de **Registro de Nuevos Colaboradores**. |
+| **Vendedor** | Solo su local asignado (`LocalId`) | • **Formulario Asistido (Wizard 3 Pasos):** Efectivo, Transferencias, Productos Vendidos e Insumos consumidos del catálogo de la sede.<br>• **Mi Historial de Turnos:** Pestaña independiente paginada a 10 registros por página con formateo seguro de fechas.<br>• **Toasts Flotantes:** Notificaciones fijas en la parte superior sin necesidad de scroll.<br>• **Mobile Friendly:** Prevención de auto-zoom en iOS Safari, teclado adaptativo y persistencia de sesión por 30 días. |
+| **Administrador** | Global (Todas las sedes) | • **Dashboard & BI:** Balance Neto, Ingresos, Gastos (Compras + Nómina), Alertas de Stock Crítico por Sede y **Modal Interactivo de Business Intelligence (BI)**.<br>• **Ventas y Cierres:** Historial general paginado (10 items) con **Auditoría de Cuadre** (Caja vs. Productos vendidos) y fechas sin excepciones en WebKit.<br>• **Gestión de Productos:** Catálogo dinámico con activación/desactivación de ítems en 1 clic y modal accesible.<br>• **Inventario:** Stock en tiempo real, alertas de mínimo y ajuste manual.<br>• **Compras y Reabastecimiento:** Panel prioritario de insumos críticos con compras a 1-clic y suma automática a inventario.<br>• **Personal y Nómina:** Doble pestaña (**Colaboradores** con tarjetas de equipo, badge blindado contra desbordamiento y registro de pagos directos + **Historial de Nómina** con totales y filtros) + Modal de **Registro de Nuevos Colaboradores**. |
 
 ---
 
@@ -61,7 +61,7 @@ El negocio de bebidas artesanales opera bajo el principio de **"Registro de Oper
 * **Framework:** ASP.NET Core Web API
 * **Arquitectura:** Clean Architecture (Domain-Driven Design)
 * **ORM:** Entity Framework Core 10 (Soporte multi-proveedor SQLite para desarrollo local y PostgreSQL para producción en la nube)
-* **Seguridad:** JWT Bearer Authentication + Hasheo de contraseñas con `BCrypt.Net-Next` + Consultas 100% parametrizadas anti-inyección SQL
+* **Seguridad:** JWT Bearer Authentication con vigencia de 30 días y `ClockSkew` tolerante de 5 minutos + Hasheo de contraseñas con `BCrypt.Net-Next` + Consultas 100% parametrizadas anti-inyección SQL
 * **Validación:** FluentValidation + Filtro global de validación
 * **Manejo de Errores:** RFC 7807 `ProblemDetails` / `ValidationProblemDetails`
 * **Documentación:** OpenAPI con `Scalar API Reference`
@@ -73,8 +73,8 @@ El negocio de bebidas artesanales opera bajo el principio de **"Registro de Oper
 * **Enrutamiento:** React Router DOM v7 con `ProtectedRoute`, sincronización inmediata de sesión y Guards por Rol
 * **Estilos:** Tailwind CSS v4 con paleta temática personalizada (`patilla-*`)
 * **Iconografía:** Lucide React
-* **Cliente HTTP:** Axios con interceptores para inyección de JWT y captura global de 401
-* **UX Móvil & Resiliencia:** `ErrorBoundary` global, prevención de auto-zoom en inputs de iOS (16px base), `overscroll-contain`, aceleración por GPU (`transform-gpu`) y bloqueo de scroll de fondo en modales.
+* **Cliente HTTP:** Axios con interceptores para inyección de JWT, lectura blindada de `localStorage` y captura de 401
+* **UX Móvil & Resiliencia:** `ErrorBoundary` global no destructivo, formateador seguro de fechas para WebKit (`fechas.js`), prevención de auto-zoom en inputs de iOS (16px base), `overscroll-contain`, aceleración por GPU (`transform-gpu`) y congelamiento completo del scroll de fondo (`body` y `documentElement`) en modales.
 
 ---
 
@@ -169,7 +169,7 @@ Diseñado específicamente para smartphones y agilidad en el puesto de trabajo:
 * **Paso 1 (Dinero en Caja):** Ingreso de Efectivo físico y Transferencias (Nequi / Daviplata) con totalizador en vivo.
 * **Paso 2 (Productos Vendidos):** Catálogo de vasos 7oz, 9oz, 14oz, fritos (deditos/pastelitos) y galletas con botones táctiles `+` / `-`.
 * **Paso 3 (Insumos Gastados & Finalizar):** Formulario dinámico con todos los insumos de la sede (Patillas, Vasos, Azúcar, Cucharas, etc.) y novedades del turno.
-* **Pestaña "Mi Historial":** Vista separada con paginación de 10 turnos por página y formato de fechas unificado (`es-CO`).
+* **Pestaña "Mi Historial":** Vista separada con paginación de 10 turnos por página y formato de fechas unificado y seguro (`es-CO`).
 
 ---
 
@@ -182,9 +182,9 @@ Diseñado específicamente para smartphones y agilidad en el puesto de trabajo:
   * Historial general con filtro por sede y paginación de 10 registros.
   * **Auditoría de Cierre:** Comparativa automática entre el *Dinero Reportado en Caja* vs. *Total según Productos Vendidos* indicando **Cuadre Perfecto ($0)**, **Sobrante** o **Descuadre**.
 * **Gestión de Productos (`/admin/productos`):**
-  * Creación, edición de precios y activación/desactivación dinámica de ítems con `PATCH /api/productos/{id}/toggle`.
+  * Creación, edición de precios y activación/desactivación dinámica de ítems con modal responsivo y congelación de fondo.
 * **Inventario General (`/admin/inventario`):**
-  * Existencias en tiempo real, alertas de stock mínimo y modal de ajuste manual.
+  * Existencias en tiempo real, alertas de stock mínimo y ajuste directo de existencias.
 * **Compras y Entradas (`/admin/compras`):**
   * Panel superior de reabastecimiento urgente de insumos en alerta y registro con auto-incremento de stock.
 * **Personal y Nómina (`/admin/pagos`):**
@@ -209,11 +209,20 @@ Al hacer clic en la tarjeta **Ingresos Totales (BI)** del Dashboard:
 
 ---
 
-### 5. Experiencia Móvil Optimizada y Error Boundary
-* **Error Boundary Global:** Captura cualquier anomalía visual imprevista en componentes de React, mostrando una pantalla amigable de recuperación y evitando páginas en blanco.
-* **Prevención de Auto-Zoom en iOS:** Tamaños de fuente mínimos de `16px` (`text-base sm:text-sm`) en campos de texto para evitar que Safari amplíe bruscamente la pantalla.
+### 5. Experiencia Móvil Optimizada, Safari iOS y Resiliencia
+
+* **Normalizador de Fechas para WebKit / iOS Safari (`fechas.js`):** Safari en iPhone descarta cadenas ISO con más de 3 dígitos de subsegundo de .NET (`.1234567Z`), arrojando una excepción crítica `RangeError: date value is not finite`. El módulo [`src/Frontend/src/utils/fechas.js`](file:///home/edgardopacheco/EDGARDO%20PACHECO/RiderProjects/PatillaDash/src/Frontend/src/utils/fechas.js) trunca a milisegundos estándar (`.123Z`), valida la finitud de la fecha y garantiza un renderizado 100% a prueba de fallos.
+* **Sesión Persistente de 30 Días:** Para evitar que las vendedoras deban reingresar credenciales tras dejar el teléfono en reposo o al día siguiente, los tokens JWT expiran a los **30 días** y cuentan con **5 minutos de `ClockSkew`** para tolerar fluctuaciones de sincronización entre el reloj del dispositivo móvil y el servidor.
+* **Error Boundary No Destructivo:** Si ocurre algún error visual inesperado en la interfaz, el capturador de errores muestra una pantalla amigable y su botón «Recargar Pantalla» usa `window.location.reload()`, **preservando intacta la sesión** del usuario en lugar de expulsarlo al formulario de inicio de sesión.
+* **Bloqueo Completo de Scroll de Fondo (*Full Viewport & Body Scroll Lock*):**
+  Al desplegar cualquier ventana flotante o modal (Auditoría de Ventas, Registrar Compra, Nuevo Colaborador, Registrar Pago, Catálogo de Productos, Business Intelligence o Cajón de Navegación Lateral), la aplicación congela simultáneamente `document.body` y `document.documentElement` con `overflow: hidden`.
+* **Interacción Táctil y Cierre Amigable en Móviles:**
+  Todos los modales cuentan con:
+  - Scroll interno independiente con contención táctil (`overscroll-contain touch-pan-y flex-1`).
+  - Cierre táctil por toque fuera de la ventana (*backdrop tap-to-dismiss*).
+  - Altura máxima adaptativa (`max-h-[92vh]`) para no interferir con las barras de navegación de iOS Safari / Chrome Android.
+* **Prevención de Auto-Zoom en iOS:** Tamaños de fuente mínimos de `16px` (`text-base sm:text-sm`) en campos de entrada para evitar que Safari amplíe bruscamente el viewport al pulsar controles de texto.
 * **Autocorrección Desactivada en Credenciales:** `autoCapitalize="none"`, `autoCorrect="off"` y `spellCheck="false"` en correo electrónico para evitar que teclados móviles agreguen mayúsculas automáticas.
-* **Bloqueo de Scroll de Fondo (*Body Scroll Lock*):** Al abrir cualquier modal o menú lateral, el fondo de la pantalla queda congelado, impidiendo movimientos erráticos en smartphones.
 
 ---
 
@@ -372,7 +381,8 @@ PatillaDash/
 │           ├── pages/                        # Login, VendedorDashboard, AdminDashboard,
 │           │                                 # AdminVentas, AdminInventario, AdminCompras,
 │           │                                 # AdminPagos, AdminProductos
-│           └── services/                     # api.js con Axios y manejo seguro de errores
+│           ├── services/                     # api.js con Axios y manejo seguro de errores
+│           └── utils/                        # fechas.js (normalizador y formateador seguro para iOS Safari)
 │
 └── tests/
     └── Backend/
