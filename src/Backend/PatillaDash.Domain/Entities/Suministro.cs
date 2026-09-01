@@ -26,4 +26,9 @@ public class Suministro
         if (nuevoMinimo < 0) throw new ArgumentException("El stock mínimo no puede ser negativo.");
         StockMinimoAlerta = nuevoMinimo;
     }
+
+    public void ActualizarUnidadMedida(UnidadMedida nuevaUnidad)
+    {
+        UnidadMedida = nuevaUnidad;
+    }
 }

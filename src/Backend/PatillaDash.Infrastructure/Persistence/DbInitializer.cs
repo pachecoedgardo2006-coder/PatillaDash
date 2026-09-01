@@ -44,8 +44,7 @@ public static class DbInitializer
                         seq_name text;
                     BEGIN
                         -- 1. Asegurar tipos boolean
-                        IF EXISTS (
-                            SELECT 1 FROM information_schema.columns 
+                        IF EXISTS (\n                            SELECT 1 FROM information_schema.columns 
                             WHERE LOWER(table_name) = 'locales' 
                               AND LOWER(column_name) = 'activo' 
                               AND data_type IN ('integer', 'smallint', 'bigint', 'numeric')
@@ -98,20 +97,20 @@ public static class DbInitializer
             await context.SaveChangesAsync();
         }
 
-        // 3. Sembrar Insumos / Suministros Reales
+        // 3. Sembrar Insumos / Suministros Reales y Actualizar Alertas
         if (!await context.Suministros.AnyAsync())
         {
             var suministros = new List<Suministro>
             {
-                new("Patillas", UnidadMedida.Unidades, 10),
+                new("Patillas", UnidadMedida.Unidades, 5),
                 new("Vasos 9 Oz", UnidadMedida.Unidades, 50),
                 new("Vasos 14 oz", UnidadMedida.Unidades, 25),
                 new("Vasos 7 oz", UnidadMedida.Unidades, 50),
-                new("Deditos (Insumo)", UnidadMedida.Unidades, 20),
-                new("Pastelitos (Insumo)", UnidadMedida.Unidades, 20),
-                new("Bolsa de basura", UnidadMedida.Bolsas, 5),
-                new("Bolsa de frito", UnidadMedida.Bolsas, 10),
-                new("Azúcar", UnidadMedida.Kilogramos, 5),
+                new("Deditos (Insumo)", UnidadMedida.Unidades, 10),
+                new("Pastelitos (Insumo)", UnidadMedida.Unidades, 10),
+                new("Bolsa de basura", UnidadMedida.Paquetes, 1),
+                new("Bolsa de frito", UnidadMedida.Paquetes, 1),
+                new("Azúcar", UnidadMedida.Kilogramos, 2),
                 new("Cucharas", UnidadMedida.Unidades, 50),
                 new("Servilletas", UnidadMedida.Unidades, 100),
                 new("Galletas (Insumo)", UnidadMedida.Unidades, 30),
@@ -119,6 +118,46 @@ public static class DbInitializer
             };
 
             await context.Suministros.AddRangeAsync(suministros);
+            await context.SaveChangesAsync();
+        }
+        else
+        {
+            // Sincronizar alertas y unidades actualizadas en BD existente
+            var existSuministros = await context.Suministros.ToListAsync();
+            foreach (var sum in existSuministros)
+            {
+                var n = sum.Nombre.ToLower();
+                if (n.Contains("patilla"))
+                {
+                    sum.ActualizarStockMinimo(5);
+                    sum.ActualizarUnidadMedida(UnidadMedida.Unidades);
+                }
+                else if (n.Contains("dedito"))
+                {
+                    sum.ActualizarStockMinimo(10);
+                    sum.ActualizarUnidadMedida(UnidadMedida.Unidades);
+                }
+                else if (n.Contains("pastelito"))
+                {
+                    sum.ActualizarStockMinimo(10);
+                    sum.ActualizarUnidadMedida(UnidadMedida.Unidades);
+                }
+                else if (n.Contains("bolsa de basura"))
+                {
+                    sum.ActualizarStockMinimo(1);
+                    sum.ActualizarUnidadMedida(UnidadMedida.Paquetes);
+                }
+                else if (n.Contains("bolsa de frito"))
+                {
+                    sum.ActualizarStockMinimo(1);
+                    sum.ActualizarUnidadMedida(UnidadMedida.Paquetes);
+                }
+                else if (n.Contains("azúcar") || n.Contains("azucar"))
+                {
+                    sum.ActualizarStockMinimo(2);
+                    sum.ActualizarUnidadMedida(UnidadMedida.Kilogramos);
+                }
+            }
             await context.SaveChangesAsync();
         }
 
@@ -141,8 +180,8 @@ public static class DbInitializer
                         "Vasos 7 oz" => 50,
                         "Deditos (Insumo)" => 30,
                         "Pastelitos (Insumo)" => 30,
-                        "Bolsa de basura" => 10,
-                        "Bolsa de frito" => 20,
+                        "Bolsa de basura" => 5,
+                        "Bolsa de frito" => 10,
                         "Azúcar" => 10,
                         "Cucharas" => 100,
                         "Servilletas" => 200,

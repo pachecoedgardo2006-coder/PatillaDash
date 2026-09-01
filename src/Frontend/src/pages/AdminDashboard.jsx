@@ -632,8 +632,8 @@ export default function AdminDashboard() {
                     className="p-2 bg-white border border-patilla-border rounded-xl text-xs font-bold text-gray-800 outline-none shadow-2xs"
                   >
                     <option value="todos">Todas las Sedes</option>
-                    <option value="1">Sede Centro (#1)</option>
-                    <option value="2">Sede Norte (#2)</option>
+                    <option value="1">Punto de la 30 (#1)</option>
+                    <option value="2">Punto de la 27 (#2)</option>
                   </select>
 
                   {/* Selector de Rango */}

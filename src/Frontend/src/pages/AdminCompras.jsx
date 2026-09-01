@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
-import { comprasService, estadisticasService } from '../services/api';
+import { comprasService, estadisticasService, inventarioService } from '../services/api';
 import { formatearFecha } from '../utils/fechas';
 import { 
   ShoppingCart, 
@@ -22,10 +22,27 @@ import {
   ArrowDownCircle
 } from 'lucide-react';
 
+const SUMINISTROS_FALLBACK = [
+  { id: 1, nombre: 'Patillas (Insumo)' },
+  { id: 2, nombre: 'Vasos 9 Oz' },
+  { id: 3, nombre: 'Vasos 14 oz' },
+  { id: 4, nombre: 'Vasos 7 oz' },
+  { id: 5, nombre: 'Deditos (Insumo)' },
+  { id: 6, nombre: 'Pastelitos (Insumo)' },
+  { id: 7, nombre: 'Bolsa de basura' },
+  { id: 8, nombre: 'Bolsa de frito' },
+  { id: 9, nombre: 'Azúcar' },
+  { id: 10, nombre: 'Cucharas' },
+  { id: 11, nombre: 'Servilletas' },
+  { id: 12, nombre: 'Galletas (Insumo)' },
+  { id: 13, nombre: 'Limones' },
+];
+
 export default function AdminCompras() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [compras, setCompras] = useState([]);
   const [insumosCriticos, setInsumosCriticos] = useState([]);
+  const [suministrosDisponibles, setSuministrosDisponibles] = useState(SUMINISTROS_FALLBACK);
   const [loading, setLoading] = useState(true);
   const [loadingAlertas, setLoadingAlertas] = useState(true);
   const [filtroLocal, setFiltroLocal] = useState('');
@@ -92,10 +109,31 @@ export default function AdminCompras() {
     }
   };
 
+  // Cargar suministros reales según el local seleccionado en el formulario
+  const cargarSuministrosLocal = async (localId) => {
+    try {
+      const res = await inventarioService.obtenerPorLocal(localId || 1);
+      if (res.data && res.data.length > 0) {
+        setSuministrosDisponibles(res.data.map(i => ({
+          id: i.suministroId,
+          nombre: `${i.nombreSuministro} (${i.unidadMedida})`,
+        })));
+      }
+    } catch (e) {
+      console.warn('Fallback a lista estática de suministros:', e);
+    }
+  };
+
   useEffect(() => {
     cargarCompras(filtroLocal);
     cargarAlertasStock();
   }, [filtroLocal]);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      cargarSuministrosLocal(formData.localId);
+    }
+  }, [isModalOpen, formData.localId]);
 
   // Manejar apertura automática y prellenado desde URL params (ej. cuando se viene de Estadísticas)
   useEffect(() => {
@@ -262,7 +300,7 @@ export default function AdminCompras() {
                   </span>
                   <button
                     onClick={() => handleReabastecerInsumo(item)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-patilla-primary hover:bg-patilla-primary-hover text-gray-950 text-xs font-black rounded-lg transition-transform active:scale-95 cursor-pointer shadow-2xs"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-patilla-primary hover:bg-patilla-primary-hover text-gray-900 text-xs font-black rounded-lg transition-transform active:scale-95 cursor-pointer shadow-2xs"
                   >
                     <PackagePlus size={13} /> Comprar ahora
                   </button>
@@ -287,8 +325,8 @@ export default function AdminCompras() {
             className="flex-1 sm:flex-none p-2.5 border border-patilla-border rounded-xl text-xs sm:text-sm bg-patilla-bg outline-none font-bold text-gray-800 shadow-2xs"
           >
             <option value="">Todas las sedes</option>
-            <option value="1">Sede Centro (#1)</option>
-            <option value="2">Sede Norte (#2)</option>
+            <option value="1">Punto de la 30 (#1)</option>
+            <option value="2">Punto de la 27 (#2)</option>
           </select>
           <button
             onClick={() => { cargarCompras(filtroLocal); cargarAlertasStock(); }}
@@ -409,8 +447,8 @@ export default function AdminCompras() {
                   onChange={(e) => setFormData({ ...formData, localId: Number(e.target.value) })}
                   className="w-full p-3 border border-patilla-border rounded-xl text-sm bg-patilla-bg outline-none font-bold"
                 >
-                  <option value={1}>Sede Principal Centro (#1)</option>
-                  <option value={2}>Sede Sucursal Norte (#2)</option>
+                  <option value={1}>Punto de la 30 (#1)</option>
+                  <option value={2}>Punto de la 27 (#2)</option>
                 </select>
               </div>
 
@@ -421,11 +459,11 @@ export default function AdminCompras() {
                   onChange={(e) => setFormData({ ...formData, suministroId: Number(e.target.value) })}
                   className="w-full p-3 border border-patilla-border rounded-xl text-sm bg-patilla-bg outline-none font-bold"
                 >
-                  <option value={1}>🍉 Sandías / Patillas Enteras (Kg)</option>
-                  <option value={2}>🥤 Vasos Desechables 16oz (Uds)</option>
-                  <option value={3}>🥤 Vasos Desechables 24oz (Uds)</option>
-                  <option value={4}>🍬 Azúcar Morena (Kg)</option>
-                  <option value={5}>🧊 Hielo Triturado en Cubos (Kg)</option>
+                  {suministrosDisponibles.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.nombre}
+                    </option>
+                  ))}
                 </select>
               </div>
 

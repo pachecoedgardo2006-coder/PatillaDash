@@ -23,7 +23,9 @@ import {
   Check, 
   X,
   Sparkles,
-  Store
+  Store,
+  Zap,
+  RotateCcw
 } from 'lucide-react';
 
 export default function VendedorDashboard() {
@@ -67,6 +69,53 @@ export default function VendedorDashboard() {
   const [consumos, setConsumos] = useState({});
 
   const localId = Number(user?.localId) || 1;
+
+  // Función inteligente para determinar si un insumo tiene cálculo 1:1 automático
+  const obtenerInfoInsumoAuto = (nombreSuministro, listaProductos) => {
+    const norm = (nombreSuministro || '').toLowerCase().replace(/\s+/g, '');
+
+    // 1. Vaso 7oz
+    if (norm.includes('vaso') && norm.includes('7oz')) {
+      const prod = listaProductos.find(p => p.nombre.toLowerCase().replace(/\s+/g, '').includes('7oz'));
+      return { esAuto: true, cantidad: prod?.cantidad || 0, origen: 'Vaso 7oz' };
+    }
+
+    // 2. Vaso 9oz
+    if (norm.includes('vaso') && norm.includes('9oz')) {
+      const prod = listaProductos.find(p => p.nombre.toLowerCase().replace(/\s+/g, '').includes('9oz'));
+      return { esAuto: true, cantidad: prod?.cantidad || 0, origen: 'Vaso 9oz' };
+    }
+
+    // 3. Vaso 14oz o 16oz
+    if (norm.includes('vaso') && (norm.includes('14oz') || norm.includes('16oz'))) {
+      const prod = listaProductos.find(p => {
+        const np = p.nombre.toLowerCase().replace(/\s+/g, '');
+        return np.includes('14oz') || np.includes('16oz');
+      });
+      return { esAuto: true, cantidad: prod?.cantidad || 0, origen: 'Vaso 14oz' };
+    }
+
+    // 4. Deditos
+    if (norm.includes('dedito')) {
+      const prod = listaProductos.find(p => p.nombre.toLowerCase().includes('dedito'));
+      return { esAuto: true, cantidad: prod?.cantidad || 0, origen: 'Deditos' };
+    }
+
+    // 5. Pastelitos
+    if (norm.includes('pastelito')) {
+      const prod = listaProductos.find(p => p.nombre.toLowerCase().includes('pastelito'));
+      return { esAuto: true, cantidad: prod?.cantidad || 0, origen: 'Pastelitos' };
+    }
+
+    // 6. Galletas
+    if (norm.includes('galleta')) {
+      const prod = listaProductos.find(p => p.nombre.toLowerCase().includes('galleta'));
+      return { esAuto: true, cantidad: prod?.cantidad || 0, origen: 'Galletas' };
+    }
+
+    // Manual: Patillas / Sandías, Azúcar, Limones, Bolsas, Servilletas, Cucharas
+    return { esAuto: false, cantidad: 0, origen: null };
+  };
 
   const cargarDatos = async () => {
     setLoading(true);
@@ -126,6 +175,20 @@ export default function VendedorDashboard() {
     }));
   };
 
+  // Sincronizar automáticamente insumos con cantidades exactas de productos vendidos
+  const sincronizarInsumosExactos = () => {
+    setConsumos(prev => {
+      const nuevo = { ...prev };
+      inventario.forEach(item => {
+        const info = obtenerInfoInsumoAuto(item.nombreSuministro, productos);
+        if (info.esAuto) {
+          nuevo[item.suministroId] = info.cantidad > 0 ? info.cantidad.toString() : '0';
+        }
+      });
+      return nuevo;
+    });
+  };
+
   const handleConsumoChange = (suministroId, valor) => {
     setConsumos(prev => ({ ...prev,
       [suministroId]: valor,
@@ -160,7 +223,11 @@ export default function VendedorDashboard() {
 
   const avanzarPaso = () => {
     if (pasoActual === 1 && !validarPaso1()) return;
-    if (pasoActual === 2 && !validarPaso2()) return;
+    if (pasoActual === 2) {
+      if (!validarPaso2()) return;
+      // Auto-calcular insumos exactos (vasos, fritos, snacks) según productos vendidos
+      sincronizarInsumosExactos();
+    }
     setPasoActual(prev => Math.min(3, prev + 1));
   };
 
@@ -180,7 +247,7 @@ export default function VendedorDashboard() {
       }));
 
     if (consumosValidos.length === 0) {
-      mostrarToast('Declara al menos un insumo consumido (ej. patillas, vasos o azúcar gastados).', 'error');
+      mostrarToast('Declara al menos un insumo consumido (ej. patillas, vasos o fritos gastados).', 'error');
       return;
     }
 
@@ -251,6 +318,17 @@ export default function VendedorDashboard() {
   const totalCalculadoProductos = productos.reduce((acc, p) => acc + (p.cantidad * p.precio), 0);
   const totalCaja = (Number(totalEfectivo) || 0) + (Number(totalTransferencia) || 0);
 
+  // Separar inventario en: Insumos Automáticos vs Insumos Manuales
+  const insumosAutomaticos = inventario.filter(item => {
+    const info = obtenerInfoInsumoAuto(item.nombreSuministro, productos);
+    return info.esAuto;
+  });
+
+  const insumosManuales = inventario.filter(item => {
+    const info = obtenerInfoInsumoAuto(item.nombreSuministro, productos);
+    return !info.esAuto;
+  });
+
   // Paginación de Historial
   const totalPaginas = Math.ceil(historialVentas.length / ITEMS_POR_PAGINA) || 1;
   const ventasPaginadas = historialVentas.slice(
@@ -266,6 +344,9 @@ export default function VendedorDashboard() {
     if (n.includes('limón') || n.includes('limon')) return '🍋';
     if (n.includes('dedito') || n.includes('pastel')) return '🥟';
     if (n.includes('galleta')) return '🍪';
+    if (n.includes('bolsa')) return '🛍️';
+    if (n.includes('cuchara')) return '🥄';
+    if (n.includes('servilleta')) return '🧻';
     return '📦';
   };
 
@@ -399,7 +480,12 @@ export default function VendedorDashboard() {
                 {/* Paso 3 */}
                 <button
                   type="button"
-                  onClick={() => { if (validarPaso1() && validarPaso2()) setPasoActual(3); }}
+                  onClick={() => { 
+                    if (validarPaso1() && validarPaso2()) {
+                      sincronizarInsumosExactos();
+                      setPasoActual(3);
+                    }
+                  }}
                   className={`relative z-10 w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-colors cursor-pointer ${
                     pasoActual === 3 ? 'bg-patilla-primary text-gray-900 ring-4 ring-white shadow-2xs font-extrabold' : 'bg-gray-200 text-gray-500'
                   }`}
@@ -409,9 +495,9 @@ export default function VendedorDashboard() {
               </div>
 
               <div className="flex justify-between text-[11px] text-gray-600 font-bold mt-2.5 px-0.5">
-                <span className={pasoActual === 1 ? 'text-gray-900' : 'text-gray-400'}>1. Dinero en Caja</span>
-                <span className={pasoActual === 2 ? 'text-gray-900' : 'text-gray-400'}>2. Productos</span>
-                <span className={pasoActual === 3 ? 'text-gray-900' : 'text-gray-400'}>3. Insumos</span>
+                <span className={pasoActual === 1 ? 'text-gray-900 font-black' : 'text-gray-400'}>1. Dinero en Caja</span>
+                <span className={pasoActual === 2 ? 'text-gray-900 font-black' : 'text-gray-400'}>2. Productos</span>
+                <span className={pasoActual === 3 ? 'text-gray-900 font-black' : 'text-gray-400'}>3. Insumos</span>
               </div>
             </div>
 
@@ -491,7 +577,7 @@ export default function VendedorDashboard() {
                       <ShoppingBag size={18} className="text-patilla-primary" /> Paso 2: Productos Vendidos
                     </h2>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      Indica las unidades servidas de cada presentación.
+                      Indica las unidades servidas de cada presentación. Los vasos y fritos se calcularán automáticamente.
                     </p>
                   </div>
 
@@ -558,77 +644,187 @@ export default function VendedorDashboard() {
                 </div>
               )}
 
-              {/* --- PASO 3: INSUMOS CONSUMIDOS DINÁMICOS & FINALIZAR --- */}
+              {/* --- PASO 3: INSUMOS CONSUMIDOS (AUTOMÁTICOS Y MANUALES) --- */}
               {pasoActual === 3 && (
-                <div className="bg-white border border-patilla-border rounded-2xl p-5 shadow-2xs space-y-4">
+                <div className="bg-white border border-patilla-border rounded-2xl p-5 shadow-2xs space-y-5">
                   <div className="border-b border-patilla-border pb-3">
                     <h2 className="font-bold text-gray-800 text-base flex items-center gap-2">
-                      <Package size={18} className="text-patilla-secondary" /> Paso 3: Insumos Gastados & Finalizar
+                      <Package size={18} className="text-patilla-secondary" /> Paso 3: Insumos y Consumo de Stock
                     </h2>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      Declara todos los insumos consumidos en la jornada para descontarlos de tu stock.
+                      Los vasos y fritos se calcularon automáticamente. Solo debes registrar las patillas y productos variables.
                     </p>
                   </div>
 
-                  {/* Lista Dinámica de Suministros del Local */}
-                  <div className="space-y-3 pt-1">
-                    {inventario.length === 0 ? (
-                      <p className="text-xs text-gray-400 text-center py-4">
-                        Cargando suministros del local...
-                      </p>
-                    ) : (
-                      inventario.map((item) => (
-                        <div
-                          key={item.suministroId}
-                          className="p-3.5 bg-patilla-bg border border-patilla-border rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  {/* 1. SECCIÓN: INSUMOS AUTOMÁTICOS EXACTOS */}
+                  {insumosAutomaticos.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-black text-gray-800 uppercase tracking-wide flex items-center gap-1.5">
+                          <Zap size={14} className="text-amber-500 fill-amber-500" />
+                          Vasos & Fritos (Auto-calculados 1:1)
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={sincronizarInsumosExactos}
+                          title="Volver a calcular según los productos del Paso 2"
+                          className="text-[11px] text-gray-500 hover:text-gray-800 font-bold flex items-center gap-1 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded-lg transition-colors cursor-pointer"
                         >
-                          <div className="flex items-center gap-2.5">
-                            <span className="text-2xl">{getInsumoIcon(item.nombreSuministro)}</span>
-                            <div>
-                              <p className="font-bold text-gray-800 text-sm">{item.nombreSuministro}</p>
-                              <span className="text-[11px] text-gray-500 font-medium">
-                                Stock actual: <strong className="text-gray-800">{item.cantidadDisponible} {item.unidadMedida}</strong>
-                              </span>
-                            </div>
-                          </div>
+                          <RotateCcw size={11} /> Re-sincronizar
+                        </button>
+                      </div>
 
-                          {/* Control de Cantidad Gastada */}
-                          <div className="flex items-center gap-2 self-end sm:self-auto">
-                            <button
-                              type="button"
-                              onClick={() => ajustarConsumoDelta(item.suministroId, -1)}
-                              className="w-10 h-10 rounded-xl bg-white border border-patilla-border flex items-center justify-center text-gray-700 font-bold hover:bg-gray-100 active:scale-90 transition-transform shadow-2xs cursor-pointer"
+                      <div className="space-y-2.5">
+                        {insumosAutomaticos.map((item) => {
+                          const info = obtenerInfoInsumoAuto(item.nombreSuministro, productos);
+                          return (
+                            <div
+                              key={item.suministroId}
+                              className="p-3 bg-amber-50/40 border border-amber-200/80 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
                             >
-                              <Minus size={16} />
-                            </button>
-                            <div className="relative w-28">
-                              <input
-                                type="number"
-                                inputMode="decimal"
-                                step={item.unidadMedida === 'Kg' ? '0.1' : '1'}
-                                min="0"
-                                placeholder="0"
-                                value={consumos[item.suministroId] || ''}
-                                onChange={(e) => handleConsumoChange(item.suministroId, e.target.value)}
-                                className="w-full p-2.5 pr-8 text-center border border-patilla-border rounded-xl text-sm bg-white font-black text-gray-800 outline-none focus:border-gray-500 shadow-2xs"
-                              />
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400 pointer-events-none">
-                                {item.unidadMedida === 'Unidades' ? 'uds' : item.unidadMedida}
-                              </span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => ajustarConsumoDelta(item.suministroId, 1)}
-                              className="w-10 h-10 rounded-xl bg-patilla-secondary/60 hover:bg-patilla-secondary flex items-center justify-center text-green-900 font-bold active:scale-90 transition-transform shadow-2xs cursor-pointer"
-                            >
-                              <Plus size={16} />
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                    )}
+                              <div className="flex items-center gap-2.5">
+                                <span className="text-2xl">{getInsumoIcon(item.nombreSuministro)}</span>
+                                <div>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <p className="font-bold text-gray-900 text-xs sm:text-sm">{item.nombreSuministro}</p>
+                                    <span className="px-1.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black rounded-md flex items-center gap-0.5">
+                                      <Zap size={10} className="fill-amber-600 text-amber-600" /> Auto: {info.cantidad} uds
+                                    </span>
+                                  </div>
+                                  <span className="text-[11px] text-gray-500">
+                                    Stock disponible: <strong className="text-gray-700">{item.cantidadDisponible} {item.unidadMedida}</strong>
+                                  </span>
+                                </div>
+                              </div>
 
+                              {/* Control de Cantidad Gastada */}
+                              <div className="flex items-center gap-2 self-end sm:self-auto">
+                                <button
+                                  type="button"
+                                  onClick={() => ajustarConsumoDelta(item.suministroId, -1)}
+                                  className="w-9 h-9 rounded-xl bg-white border border-patilla-border flex items-center justify-center text-gray-700 font-bold hover:bg-gray-100 active:scale-90 transition-transform shadow-2xs cursor-pointer"
+                                >
+                                  <Minus size={15} />
+                                </button>
+                                <div className="relative w-24">
+                                  <input
+                                    type="number"
+                                    inputMode="decimal"
+                                    min="0"
+                                    placeholder="0"
+                                    value={consumos[item.suministroId] || ''}
+                                    onChange={(e) => handleConsumoChange(item.suministroId, e.target.value)}
+                                    className="w-full p-2 pr-7 text-center border border-amber-300 rounded-xl text-xs sm:text-sm bg-white font-black text-gray-900 outline-none focus:border-amber-500 shadow-2xs"
+                                  />
+                                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-gray-400 pointer-events-none">
+                                    uds
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => ajustarConsumoDelta(item.suministroId, 1)}
+                                  className="w-9 h-9 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 flex items-center justify-center font-bold active:scale-90 transition-transform shadow-2xs cursor-pointer"
+                                >
+                                  <Plus size={15} />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 2. SECCIÓN: INSUMOS MANUALES (PATILLAS, AZÚCAR, LIMONES, BOLSAS) */}
+                  <div className="space-y-3 pt-1">
                     <div>
+                      <h3 className="text-xs font-black text-gray-800 uppercase tracking-wide flex items-center gap-1.5">
+                        <span>🍉</span> Insumos de Registro Manual (Rendimiento Variable)
+                      </h3>
+                      <p className="text-[11px] text-gray-500">
+                        Indica cuántas sandías/patillas enteras se abrieron hoy y otros insumos usados.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {insumosManuales.length === 0 ? (
+                        <p className="text-xs text-gray-400 text-center py-3">No hay insumos manuales configurados.</p>
+                      ) : (
+                        insumosManuales.map((item) => {
+                          const isPatilla = item.nombreSuministro.toLowerCase().includes('patilla');
+                          return (
+                            <div
+                              key={item.suministroId}
+                              className={`p-3.5 border rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-all ${
+                                isPatilla 
+                                  ? 'bg-emerald-50/60 border-emerald-300 shadow-2xs ring-1 ring-emerald-200' 
+                                  : 'bg-patilla-bg border-patilla-border'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <span className="text-2xl">{getInsumoIcon(item.nombreSuministro)}</span>
+                                <div>
+                                  <div className="flex items-center gap-1.5">
+                                    <p className="font-bold text-gray-900 text-xs sm:text-sm">{item.nombreSuministro}</p>
+                                    {isPatilla && (
+                                      <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-900 border border-emerald-300 text-[10px] font-black rounded-md">
+                                        Principal
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-[11px] text-gray-500">
+                                    Stock actual: <strong className="text-gray-700">{item.cantidadDisponible} {item.unidadMedida}</strong>
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Control de Cantidad Gastada */}
+                              <div className="flex items-center gap-2 self-end sm:self-auto">
+                                <button
+                                  type="button"
+                                  onClick={() => ajustarConsumoDelta(item.suministroId, item.unidadMedida === 'Kg' ? -0.5 : -1)}
+                                  className="w-9 h-9 rounded-xl bg-white border border-patilla-border flex items-center justify-center text-gray-700 font-bold hover:bg-gray-100 active:scale-90 transition-transform shadow-2xs cursor-pointer"
+                                >
+                                  <Minus size={15} />
+                                </button>
+                                <div className="relative w-24">
+                                  <input
+                                    type="number"
+                                    inputMode="decimal"
+                                    step={item.unidadMedida === 'Kg' ? '0.1' : '1'}
+                                    min="0"
+                                    placeholder="0"
+                                    value={consumos[item.suministroId] || ''}
+                                    onChange={(e) => handleConsumoChange(item.suministroId, e.target.value)}
+                                    className={`w-full p-2 pr-7 text-center border rounded-xl text-xs sm:text-sm bg-white font-black outline-none shadow-2xs ${
+                                      isPatilla 
+                                        ? 'border-emerald-400 text-emerald-900 focus:ring-2 focus:ring-emerald-300' 
+                                        : 'border-patilla-border text-gray-900 focus:border-gray-500'
+                                    }`}
+                                  />
+                                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-gray-400 pointer-events-none">
+                                    {item.unidadMedida === 'Unidades' ? 'uds' : item.unidadMedida}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => ajustarConsumoDelta(item.suministroId, item.unidadMedida === 'Kg' ? 0.5 : 1)}
+                                  className={`w-9 h-9 rounded-xl font-bold flex items-center justify-center active:scale-90 transition-transform shadow-2xs cursor-pointer ${
+                                    isPatilla 
+                                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white' 
+                                      : 'bg-patilla-secondary/70 hover:bg-patilla-secondary text-green-950'
+                                  }`}
+                                >
+                                  <Plus size={15} />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    <div className="pt-1">
                       <label className="block text-xs font-bold text-gray-700 mb-1">
                         Novedades / Observaciones del Turno (Opcional)
                       </label>
@@ -637,7 +833,7 @@ export default function VendedorDashboard() {
                         placeholder="Ej. Se abrió paquete nuevo de vasos / Día con alta afluencia"
                         value={notas}
                         onChange={(e) => setNotas(e.target.value)}
-                        className="w-full p-3 border border-patilla-border rounded-xl text-sm bg-patilla-bg outline-none focus:border-gray-500 focus:bg-white"
+                        className="w-full p-3 border border-patilla-border rounded-xl text-xs sm:text-sm bg-patilla-bg outline-none focus:border-gray-500 focus:bg-white"
                       ></textarea>
                     </div>
                   </div>
@@ -653,11 +849,11 @@ export default function VendedorDashboard() {
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="flex-1 py-3.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all text-sm shadow-md disabled:opacity-50 active:scale-98 cursor-pointer"
+                      className="flex-1 py-3.5 bg-green-600 hover:bg-green-700 text-white font-black rounded-xl flex items-center justify-center gap-2 transition-all text-sm shadow-md disabled:opacity-50 active:scale-98 cursor-pointer"
                     >
                       {submitting ? (
                         <>
-                          <RefreshCw size={17} className="animate-spin" /> Guardando...
+                          <RefreshCw size={17} className="animate-spin" /> Guardando Cierre...
                         </>
                       ) : (
                         <>

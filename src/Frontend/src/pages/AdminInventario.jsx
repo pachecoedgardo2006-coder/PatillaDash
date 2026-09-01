@@ -110,8 +110,8 @@ export default function AdminInventario() {
             onChange={(e) => setLocalSeleccionado(Number(e.target.value))}
             className="flex-1 sm:flex-none p-2.5 border border-patilla-border rounded-xl text-xs sm:text-sm bg-patilla-bg outline-none font-bold text-gray-800"
           >
-            <option value={1}>Sede Principal Centro (#1)</option>
-            <option value={2}>Sede Sucursal Norte (#2)</option>
+            <option value={1}>Punto de la 30 (#1)</option>
+            <option value={2}>Punto de la 27 (#2)</option>
           </select>
         </div>
         <div className="flex items-center gap-3">
